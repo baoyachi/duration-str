@@ -18,14 +18,15 @@ enum TimeUnit {
 }
 
 const ONE_MINUTE_SECOND: u64 = 60;
-const ONE_HOUR_SECOND: u64 = ONE_MINUTE_SECOND ^ 2;
+const ONE_HOUR_SECOND: u64 = ONE_MINUTE_SECOND * ONE_MINUTE_SECOND;
 const ONE_DAY_SECOND: u64 = 24 * ONE_HOUR_SECOND;
 const ONE_WEEK_SECOND: u64 = 7 * ONE_DAY_SECOND;
 const ONE_MONTH_SECOND: u64 = 30 * ONE_DAY_SECOND;
 const ONE_YEAR_SECOND: u64 = 365 * ONE_DAY_SECOND;
 
 impl TimeUnit {
-    fn duration(&self, time: u64) -> u64 {
+    fn duration(&self, time_str: &str) -> anyhow::Result<u64> {
+        let time = time_str.parse::<u64>()?;
         let unit = match self {
             TimeUnit::Year => ONE_YEAR_SECOND,
             TimeUnit::Month => ONE_MONTH_SECOND,
@@ -35,7 +36,7 @@ impl TimeUnit {
             TimeUnit::Minute => ONE_MINUTE_SECOND,
             TimeUnit::Second => 1,
         };
-        time * unit
+        Ok(time * unit)
     }
 }
 
@@ -49,11 +50,51 @@ enum CondUnit {
 }
 
 impl CondUnit {
-    fn calc(&self, x: u64, y: u64) -> u64 {
+    fn init() -> (Self, u64) {
+        (CondUnit::Star, 1)
+    }
+
+    fn change_duration(&self) -> u64 {
         match self {
+            CondUnit::Plus => 0,
+            CondUnit::Star => 1,
+        }
+    }
+
+    fn calc(&self, x: u64, y: u64) -> Duration {
+        let second = match self {
             CondUnit::Plus => x + y,
             CondUnit::Star => x * y,
+        };
+        Duration::new(second, 0)
+    }
+}
+
+trait Calc<T> {
+    fn calc(&self) -> anyhow::Result<T>;
+}
+
+impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit)> {
+    fn calc(&self) -> anyhow::Result<(CondUnit, u64)> {
+        let (mut init_cond, mut init_duration) = CondUnit::init();
+        for (index, (val, cond)) in self.iter().enumerate() {
+            if index == 0 {
+                init_cond = cond.clone();
+                init_duration = init_cond.change_duration();
+            } else if &init_cond != cond {
+                return Err(anyhow!(
+                    "not support '{}' with '{}' calculate",
+                    init_cond.to_string(),
+                    cond.to_string()
+                ));
+            }
+
+            match init_cond {
+                CondUnit::Plus => init_duration += val.parse::<u64>()?,
+                CondUnit::Star => init_duration *= val.parse::<u64>()?,
+            }
         }
+        Ok((init_cond, init_duration))
     }
 }
 
@@ -109,14 +150,55 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit)>> {
         input = in_input;
         vec.push((out, cond));
     }
-    Ok((input, vec))
+    Ok(("", vec))
 }
 
+/// Parse string to `Duration` .
+///
+/// The String value unit support for one of:[y,mon,w,d,h,m,s]
+///
+/// - y:Year. Support string value: ["y" | "year" | "Y" | "YEAR" | "Year"]. e.g. 1y
+///
+/// - mon:Month.Support string value: ["mon" | "MON" | "Month" | "month" | "MONTH"]. e.g. 1mon
+///
+/// - w:Week.Support string value: ["w" | "W" | "Week" | "WEEK" | "week"]. e.g. 1w
+///
+/// - d:Day.Support string value: ["d" | "D" | "Day" | "DAY" | "day"]. e.g. 1d
+///
+/// - h:Hour.Support string value: ["h" | "H" | "Hour" | "HOUR" | "hour"]. e.g. 1h
+///
+/// - m:Minute.Support string value: ["m" | "M" | "Minute" | "MINUTE" | "minute"]. e.g. 1m
+///
+/// - m:Second.Support string value: ["s" | "S" | "Second" | "SECOND" | "second"]. e.g. 1s
+///
+/// Also,`duration_str` support time duration simple calcaute(+,*). See example:
+///
+/// # Example
+///
+/// ```rust
+///
+/// use duration_str::parse;
+/// use std::time::Duration;
+///
+/// let duration = parse("1d").unwrap();
+/// assert_eq!(duration,Duration::new(24*60*60,0));
+///
+/// let duration = parse("3m+31").unwrap();
+/// assert_eq!(duration,Duration::new(211,0));
+///
+/// let duration = parse("3m + 31").unwrap();
+/// assert_eq!(duration,Duration::new(211,0));
+///
+/// let duration = parse("1m*10").unwrap();
+/// assert_eq!(duration,Duration::new(600,0));
+///
+/// let duration = parse("1m * 10").unwrap();
+/// assert_eq!(duration,Duration::new(600,0));
+/// ```
+///
 pub fn parse(input: &str) -> anyhow::Result<Duration> {
-    let (in_input, ((time, time_unit), cond_opt)) =
-        tuple((parse_time, opt(cond_time)))(input).unwrap();
-    let mut default_cond = CondUnit::Star;
-    let mut default_val = 0;
+    let (in_input, ((time_str, time_unit), cond_opt)) =
+        tuple((parse_time, opt(cond_time)))(input).map_err(|e| anyhow!("parse error:{}", e))?;
     if !in_input.is_empty() && cond_opt.is_none() {
         return Err(anyhow!(
             "not support duration string:[{}],cause by:[{}],",
@@ -125,33 +207,11 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
         ));
     }
 
-    if let Some(opt) = cond_opt {
-        for (index, (val, cond)) in opt.iter().enumerate() {
-            if index == 0 {
-                default_cond = cond.clone();
-                if default_cond == CondUnit::Star {
-                    default_val = 1;
-                }
-            } else if &default_cond != cond {
-                return Err(anyhow!(
-                    "not support '{}' with '{}' calculate",
-                    default_cond.to_string(),
-                    cond.to_string()
-                ));
-            }
-
-            match default_cond {
-                CondUnit::Plus => default_val += val.parse::<u64>()?,
-                CondUnit::Star => default_val *= val.parse::<u64>()?,
-            }
-        }
-    }
-    let time = time.parse::<u64>()?;
-
-    let duration_time = time_unit.duration(time);
-
-    let second = default_cond.calc(duration_time, default_val);
-    let duration = Duration::new(second, 0);
+    let (init_cond, init_duration) = cond_opt
+        .map(|val| val.calc())
+        .unwrap_or_else(|| Ok(CondUnit::init()))?;
+    let unit_time = time_unit.duration(time_str)?;
+    let duration = init_cond.calc(unit_time, init_duration);
     Ok(duration)
 }
 
@@ -221,12 +281,18 @@ mod tests {
 
     #[test]
     fn test_duration_parse5() {
+        let duration = parse("1m+60+24 ").unwrap();
+        assert_eq!(duration, Duration::new(144, 0))
+    }
+
+    #[test]
+    fn test_duration_parse6() {
         let duration = parse("0m").unwrap();
         assert_eq!(duration, Duration::new(0, 0))
     }
 
     #[test]
-    fn test_duration_parse6() {
+    fn test_duration_parse7() {
         assert!(parse("0m+3-5").is_err())
     }
 }
