@@ -7,7 +7,7 @@ description = "duration string parser"
 keywords = ["duration", "time", "duration-string", "duration-parser", "time-parser"]
 readme = "README.md"
 categories = ["Parsing tools", "date-and-time"]
-repository = "https://github.com/baoyachi/duration-str-rs "
+repository = "https://github.com/baoyachi/duration-str-rs"
 license = "MIT AND Apache-2.0"
 
 

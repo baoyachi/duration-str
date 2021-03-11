@@ -80,7 +80,7 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit)>> {
 // 12 * 60 * 60
 // 12 * 60 + 60
 
-pub fn duration_parse(input: &str) -> anyhow::Result<Duration> {
+pub fn parse(input: &str) -> anyhow::Result<Duration> {
     let (_, ((time, time_unit), cond_opt)) = tuple((parse_time, opt(cond_time)))(input).unwrap();
     let mut default_val = 1;
     if let Some(opt) = cond_opt {
@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn test_duration_parse() {
-        let duration = duration_parse("12d* 60+30").unwrap();
+        let duration = parse("1h*60*60").unwrap();
         println!("{:?}", duration);
     }
 }
