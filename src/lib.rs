@@ -1,10 +1,10 @@
 use nom::{IResult, InputTakeAtPosition};
-use nom::bytes::complete::tag;
 use nom::character::complete::{digit1, alpha1, multispace0};
 use nom::sequence::tuple;
 use nom::combinator::opt;
 use nom::error::ErrorKind;
 use std::time::Duration;
+use anyhow::anyhow;
 
 #[derive(Debug, Eq, PartialEq)]
 enum TimeUnit {
@@ -17,10 +17,22 @@ enum TimeUnit {
     Second,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+const PLUS: &str = "+";
+const STAR: &str = "*";
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 enum CondUnit {
     Plus,
     Star,
+}
+
+impl ToString for CondUnit {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Plus => PLUS.to_string(),
+            Self::Star => STAR.to_string(),
+        }
+    }
 }
 
 fn time_unit(input: &str) -> IResult<&str, TimeUnit> {
@@ -68,12 +80,39 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit)>> {
 // 12 * 60 * 60
 // 12 * 60 + 60
 
-pub fn duration_parse(input: &str) /*-> Result<Duration, String> */ {
-    let (_, ((time, time_unit),cond_opt)) = tuple((parse_time, opt(cond_time)))(input).unwrap();
+pub fn duration_parse(input: &str) -> anyhow::Result<Duration> {
+    let (_, ((time, time_unit), cond_opt)) = tuple((parse_time, opt(cond_time)))(input).unwrap();
+    let mut default_val = 1;
     if let Some(opt) = cond_opt {
-        //TODO not support
+        let mut default_cond = CondUnit::Star;
+
+        for (index, (val, cond)) in opt.iter().enumerate() {
+            if index == 0 {
+                default_cond = cond.clone();
+            } else if &default_cond != cond {
+                return Err(anyhow!("not support '{}' with '{}' calculate", default_cond.to_string(), cond.to_string()));
+            }
+
+            match default_cond {
+                CondUnit::Plus => default_val *= val.parse::<u64>()?,
+                CondUnit::Star => default_val += val.parse::<u64>()?,
+            }
+        }
     }
-    // println!("x:{:?}", x);
+    let time = time.parse::<u64>()?;
+
+    let duration_time = match time_unit {
+        TimeUnit::Year => time * 365 * 24 * 60 * 60,
+        TimeUnit::Month => time * 30 * 24 * 60 * 60,
+        TimeUnit::Week => time * 7 * 24 * 60 * 60,
+        TimeUnit::Day => time * 24 * 60 * 60,
+        TimeUnit::Hour => time * 60 * 60,
+        TimeUnit::Minute => time * 60,
+        TimeUnit::Second => time
+    };
+    let second = duration_time + default_val;
+    let duration = Duration::new(second, 0);
+    Ok(duration)
 }
 
 
@@ -122,7 +161,8 @@ mod tests {
 
     #[test]
     fn test_duration_parse() {
-        duration_parse("12d* 60*30");
+        let duration = duration_parse("12d* 60+30").unwrap();
+        println!("{:?}", duration);
     }
 }
 
