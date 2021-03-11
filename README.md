@@ -3,7 +3,7 @@
 ## example
 ```toml
 [dependencies]
-duration-str = "0.1.0" 
+duration-str = "0.1" 
 ```
 
 ```rust
