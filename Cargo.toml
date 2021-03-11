@@ -3,6 +3,13 @@ name = "duration-str"
 version = "0.1.0"
 authors = ["baoyachi <liaoymxsdl@gmail.com>"]
 edition = "2018"
+description = "duration string parser"
+keywords = ["duration", "time", "duration-string", "duration-parser", "time-parser"]
+readme = "README.md"
+categories = ["Parsing tools", "date-and-time"]
+repository = "https://github.com/baoyachi/duration-str-rs "
+license = "MIT AND Apache-2.0"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
