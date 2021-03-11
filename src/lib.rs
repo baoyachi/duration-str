@@ -85,13 +85,15 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit)>> {
 
 pub fn parse(input: &str) -> anyhow::Result<Duration> {
     let (_, ((time, time_unit), cond_opt)) = tuple((parse_time, opt(cond_time)))(input).unwrap();
-    let mut default_val = 1;
+    let mut default_cond = CondUnit::Star;
+    let mut default_val = 0;
     if let Some(opt) = cond_opt {
-        let mut default_cond = CondUnit::Star;
-
         for (index, (val, cond)) in opt.iter().enumerate() {
             if index == 0 {
                 default_cond = cond.clone();
+                if default_cond == CondUnit::Star {
+                    default_val = 1;
+                }
             } else if &default_cond != cond {
                 return Err(anyhow!(
                     "not support '{}' with '{}' calculate",
@@ -101,8 +103,8 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
             }
 
             match default_cond {
-                CondUnit::Plus => default_val *= val.parse::<u64>()?,
-                CondUnit::Star => default_val += val.parse::<u64>()?,
+                CondUnit::Plus => default_val += val.parse::<u64>()?,
+                CondUnit::Star => default_val *= val.parse::<u64>()?,
             }
         }
     }
@@ -117,7 +119,11 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
         TimeUnit::Minute => time * 60,
         TimeUnit::Second => time,
     };
-    let second = duration_time + default_val;
+
+    let second = match default_cond {
+        CondUnit::Plus => duration_time + default_val,
+        CondUnit::Star => duration_time * default_val,
+    };
     let duration = Duration::new(second, 0);
     Ok(duration)
 }
@@ -163,8 +169,26 @@ mod tests {
     }
 
     #[test]
-    fn test_duration_parse() {
-        let duration = parse("1h*60*60").unwrap();
-        println!("{:?}", duration);
+    fn test_duration_parse1() {
+        let duration = parse("1m+31").unwrap();
+        assert_eq!(duration, Duration::new(91, 0))
+    }
+
+    #[test]
+    fn test_duration_parse2() {
+        let duration = parse("1m*60").unwrap();
+        assert_eq!(duration, Duration::new(3600, 0))
+    }
+
+    #[test]
+    fn test_duration_parse3() {
+        let duration = parse("1m*60*20").unwrap();
+        assert_eq!(duration, Duration::new(72000, 0))
+    }
+
+    #[test]
+    fn test_duration_parse4() {
+        let duration = parse("1m+60+24").unwrap();
+        assert_eq!(duration, Duration::new(144, 0))
     }
 }
