@@ -168,26 +168,3 @@ mod tests {
         println!("{:?}", duration);
     }
 }
-
-// 12 * 60 * 60
-// #[test]
-// fn test_duration() {
-//     use std::time::Duration;
-//     let input = "1d";
-//     // YY/MM/DD hh::mm::ss
-//     //1y == 1Y == 1YEAR == 1year
-//     //1mon == 1MONTH == 1MON = 1mon
-//     //1w = 1week == 1WEEK == 1W
-//     //1d = 1day == 1D
-//     //1h == 1hour = 1H
-//     //1min == 1MIN = 1minute = 1m
-//     //1s = 1Second == 1SECOND
-//     //1s-6s ：range
-//     // 1,000 皮秒 = 1纳秒 ns
-//     // 1,000,000 皮秒 = 1微秒 μs
-//     // 1,000,000,000 皮秒 = 1毫秒 μs
-//     // 1,000,000,000,000 皮秒 = 1秒 s
-//     //1d*60*60
-//     let result = parse_year("12y").unwrap();
-//     println!("{:?}", result);
-// }
