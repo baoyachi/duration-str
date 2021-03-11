@@ -113,9 +113,18 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit)>> {
 }
 
 pub fn parse(input: &str) -> anyhow::Result<Duration> {
-    let (_, ((time, time_unit), cond_opt)) = tuple((parse_time, opt(cond_time)))(input).unwrap();
+    let (in_input, ((time, time_unit), cond_opt)) =
+        tuple((parse_time, opt(cond_time)))(input).unwrap();
     let mut default_cond = CondUnit::Star;
     let mut default_val = 0;
+    if !in_input.is_empty() && cond_opt.is_none() {
+        return Err(anyhow!(
+            "not support duration string:[{}],cause by:[{}],",
+            input,
+            in_input
+        ));
+    }
+
     if let Some(opt) = cond_opt {
         for (index, (val, cond)) in opt.iter().enumerate() {
             if index == 0 {
@@ -218,7 +227,6 @@ mod tests {
 
     #[test]
     fn test_duration_parse6() {
-        let duration = parse("0m+3+5").unwrap();
-        assert_eq!(duration, Duration::new(8, 0))
+        assert!(parse("0m+3-5").is_err())
     }
 }
