@@ -17,6 +17,28 @@ enum TimeUnit {
     Second,
 }
 
+const ONE_MINUTE_SECOND: u64 = 60;
+const ONE_HOUR_SECOND: u64 = ONE_MINUTE_SECOND ^ 2;
+const ONE_DAY_SECOND: u64 = 24 * ONE_HOUR_SECOND;
+const ONE_WEEK_SECOND: u64 = 7 * ONE_DAY_SECOND;
+const ONE_MONTH_SECOND: u64 = 30 * ONE_DAY_SECOND;
+const ONE_YEAR_SECOND: u64 = 365 * ONE_DAY_SECOND;
+
+impl TimeUnit {
+    fn duration(&self, time: u64) -> u64 {
+        let unit = match self {
+            TimeUnit::Year => ONE_YEAR_SECOND,
+            TimeUnit::Month => ONE_MONTH_SECOND,
+            TimeUnit::Week => ONE_WEEK_SECOND,
+            TimeUnit::Day => ONE_DAY_SECOND,
+            TimeUnit::Hour => ONE_HOUR_SECOND,
+            TimeUnit::Minute => ONE_MINUTE_SECOND,
+            TimeUnit::Second => 1,
+        };
+        time * unit
+    }
+}
+
 const PLUS: &str = "+";
 const STAR: &str = "*";
 
@@ -24,6 +46,15 @@ const STAR: &str = "*";
 enum CondUnit {
     Plus,
     Star,
+}
+
+impl CondUnit {
+    fn calc(&self, x: u64, y: u64) -> u64 {
+        match self {
+            CondUnit::Plus => x + y,
+            CondUnit::Star => x * y,
+        }
+    }
 }
 
 impl ToString for CondUnit {
@@ -80,8 +111,6 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit)>> {
     }
     Ok((input, vec))
 }
-// 12 * 60 * 60
-// 12 * 60 + 60
 
 pub fn parse(input: &str) -> anyhow::Result<Duration> {
     let (_, ((time, time_unit), cond_opt)) = tuple((parse_time, opt(cond_time)))(input).unwrap();
@@ -110,20 +139,9 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
     }
     let time = time.parse::<u64>()?;
 
-    let duration_time = match time_unit {
-        TimeUnit::Year => time * 365 * 24 * 60 * 60,
-        TimeUnit::Month => time * 30 * 24 * 60 * 60,
-        TimeUnit::Week => time * 7 * 24 * 60 * 60,
-        TimeUnit::Day => time * 24 * 60 * 60,
-        TimeUnit::Hour => time * 60 * 60,
-        TimeUnit::Minute => time * 60,
-        TimeUnit::Second => time,
-    };
+    let duration_time = time_unit.duration(time);
 
-    let second = match default_cond {
-        CondUnit::Plus => duration_time + default_val,
-        CondUnit::Star => duration_time * default_val,
-    };
+    let second = default_cond.calc(duration_time, default_val);
     let duration = Duration::new(second, 0);
     Ok(duration)
 }
@@ -190,5 +208,17 @@ mod tests {
     fn test_duration_parse4() {
         let duration = parse("1m+60+24").unwrap();
         assert_eq!(duration, Duration::new(144, 0))
+    }
+
+    #[test]
+    fn test_duration_parse5() {
+        let duration = parse("0m").unwrap();
+        assert_eq!(duration, Duration::new(0, 0))
+    }
+
+    #[test]
+    fn test_duration_parse6() {
+        let duration = parse("0m+3+5").unwrap();
+        assert_eq!(duration, Duration::new(8, 0))
     }
 }
