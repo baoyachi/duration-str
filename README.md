@@ -1,5 +1,10 @@
 # parse string to std::time::Duration
 
+[![Chrono GitHub Actions](https://github.com/baoyachi/duration-str-rs/workflows/build/badge.svg)](https://github.com/baoyachi/duration-str-rs/actions?query=workflow%3Abuild)
+[![Crates.io](https://img.shields.io/crates/v/duration-str.svg)](https://crates.io/crates/duration-str)
+[![Docs.rs](https://docs.rs/duration-str/badge.svg)](https://docs.rs/duration-str)
+
+
 Parse string to `Duration` . The String value unit support for one of:[y,mon,w,d,h,m,s]
 - y:Year. Support string value: ["y" | "year" | "Y" | "YEAR" | "Year"]. e.g. 1y
 - mon:Month.Support string value: ["mon" | "MON" | "Month" | "month" | "MONTH"]. e.g. 1mon
