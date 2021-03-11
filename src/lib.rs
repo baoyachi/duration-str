@@ -1,10 +1,10 @@
-use nom::{IResult, InputTakeAtPosition};
-use nom::character::complete::{digit1, alpha1, multispace0};
-use nom::sequence::tuple;
+use anyhow::anyhow;
+use nom::character::complete::{alpha1, digit1, multispace0};
 use nom::combinator::opt;
 use nom::error::ErrorKind;
+use nom::sequence::tuple;
+use nom::{IResult, InputTakeAtPosition};
 use std::time::Duration;
-use anyhow::anyhow;
 
 #[derive(Debug, Eq, PartialEq)]
 enum TimeUnit {
@@ -45,16 +45,23 @@ fn time_unit(input: &str) -> IResult<&str, TimeUnit> {
         "h" | "H" | "Hour" | "HOUR" | "hour" => Ok((input, TimeUnit::Hour)),
         "m" | "M" | "Minute" | "MINUTE" | "minute" => Ok((input, TimeUnit::Minute)),
         "s" | "S" | "Second" | "SECOND" | "second" => Ok((input, TimeUnit::Second)),
-        _ => Err(nom::Err::Error(nom::error::Error::new("expect one of [y,mon,w,d,h,m,s]", ErrorKind::Alpha)))
+        _ => Err(nom::Err::Error(nom::error::Error::new(
+            "expect one of [y,mon,w,d,h,m,s]",
+            ErrorKind::Alpha,
+        ))),
     }
 }
 
 fn cond_unit(input: &str) -> IResult<&str, CondUnit> {
-    let (input, out) = input.split_at_position1_complete(|item| !matches!(item, '+' | '*'), ErrorKind::Char)?;
+    let (input, out) =
+        input.split_at_position1_complete(|item| !matches!(item, '+' | '*'), ErrorKind::Char)?;
     match out {
         "+" => Ok((input, CondUnit::Plus)),
         "*" => Ok((input, CondUnit::Star)),
-        _ => Err(nom::Err::Error(nom::error::Error::new("expect one of [+,*]", ErrorKind::Char)))
+        _ => Err(nom::Err::Error(nom::error::Error::new(
+            "expect one of [+,*]",
+            ErrorKind::Char,
+        ))),
     }
 }
 
@@ -66,12 +73,8 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit)>> {
     let mut vec = vec![];
     let mut input = input;
     while !input.trim().is_empty() {
-        let (in_input, (_, cond, _, out)) = tuple((
-            multispace0,
-            cond_unit,
-            multispace0,
-            digit1,
-        ))(input)?;
+        let (in_input, (_, cond, _, out)) =
+            tuple((multispace0, cond_unit, multispace0, digit1))(input)?;
         input = in_input;
         vec.push((out, cond));
     }
@@ -90,7 +93,11 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
             if index == 0 {
                 default_cond = cond.clone();
             } else if &default_cond != cond {
-                return Err(anyhow!("not support '{}' with '{}' calculate", default_cond.to_string(), cond.to_string()));
+                return Err(anyhow!(
+                    "not support '{}' with '{}' calculate",
+                    default_cond.to_string(),
+                    cond.to_string()
+                ));
             }
 
             match default_cond {
@@ -108,13 +115,12 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
         TimeUnit::Day => time * 24 * 60 * 60,
         TimeUnit::Hour => time * 60 * 60,
         TimeUnit::Minute => time * 60,
-        TimeUnit::Second => time
+        TimeUnit::Second => time,
     };
     let second = duration_time + default_val;
     let duration = Duration::new(second, 0);
     Ok(duration)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -153,10 +159,7 @@ mod tests {
     fn test_cond_time2() {
         let (input, out) = cond_time(" * 60*30").unwrap();
         assert_eq!(input, "");
-        assert_eq!(out, vec![
-            ("60", CondUnit::Star),
-            ("30", CondUnit::Star),
-        ]);
+        assert_eq!(out, vec![("60", CondUnit::Star), ("30", CondUnit::Star),]);
     }
 
     #[test]
@@ -165,7 +168,6 @@ mod tests {
         println!("{:?}", duration);
     }
 }
-
 
 // 12 * 60 * 60
 // #[test]
