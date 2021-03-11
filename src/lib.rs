@@ -16,7 +16,7 @@
 //!
 //! - m:Second.Support string value: ["s" | "S" | "Second" | "SECOND" | "second"]. e.g. 1s
 //!
-//! Also,`duration_str` support time duration simple calcaute(+,*). See example:
+//! Also,`duration_str` support time duration simple evaluation(+,*). See example:
 //!
 //! # Example
 //!
