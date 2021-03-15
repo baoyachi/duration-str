@@ -1,6 +1,6 @@
 //! Parse string to `Duration` .
 //!
-//! The String value unit support for one of:[y,mon,w,d,h,m,s]
+//! The String value unit support for one of:["y","mon","w","d","h","m","s"]
 //!
 //! - y:Year. Support string value: ["y" | "year" | "Y" | "YEAR" | "Year"]. e.g. 1y
 //!
