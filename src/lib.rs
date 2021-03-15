@@ -216,6 +216,69 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
     Ok(duration)
 }
 
+/// convert Into<String> to `std::time::Duration`
+///
+/// # Example
+///
+/// ```rust
+///
+/// use duration_str::parse;
+/// use std::time::Duration;
+///
+/// let duration = parse("1d").unwrap();
+/// assert_eq!(duration,Duration::new(24*60*60,0));
+///
+/// let duration = parse("3m+31").unwrap();
+/// assert_eq!(duration,Duration::new(211,0));
+///
+/// let duration = parse("3m + 31").unwrap();
+/// assert_eq!(duration,Duration::new(211,0));
+///
+/// let duration = parse("1m*10").unwrap();
+/// assert_eq!(duration,Duration::new(600,0));
+///
+/// let duration = parse("1m * 10").unwrap();
+/// assert_eq!(duration,Duration::new(600,0));
+/// ```
+///
+pub fn parse_std<S: Into<String>>(input: S) -> anyhow::Result<Duration> {
+    let input = input.into();
+    parse(input.as_str())
+}
+
+/// convert Into<String> to `chrono::Duration`
+///
+/// # Example
+///
+/// ```rust
+///
+/// use duration_str::parse_chrono;
+/// use chrono::Duration;
+///
+/// let duration = parse_chrono("1d").unwrap();
+/// assert_eq!(duration,Duration::seconds(24*60*60));
+///
+/// let duration = parse_chrono("3m+31").unwrap();
+/// assert_eq!(duration,Duration::seconds(211));
+///
+/// let duration = parse_chrono("3m + 31").unwrap();
+/// assert_eq!(duration,Duration::seconds(211));
+///
+/// let duration = parse_chrono("1m*10").unwrap();
+/// assert_eq!(duration,Duration::seconds(600));
+///
+/// let duration = parse_chrono("1m * 10").unwrap();
+/// assert_eq!(duration,Duration::seconds(600));
+/// ```
+///
+///
+#[cfg(feature = "chrono")]
+pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duration> {
+    let std_duration = parse_std(input)?;
+    let duration = chrono::Duration::from_std(std_duration)?;
+    Ok(duration)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -295,5 +358,13 @@ mod tests {
     #[test]
     fn test_duration_parse7() {
         assert!(parse("0m+3-5").is_err())
+    }
+
+    #[test]
+    #[cfg(feature = "chrono")]
+    fn test_parse_chrono() {
+        use chrono::Duration;
+        let duration = parse_chrono("1m+60+24 ").unwrap();
+        assert_eq!(duration, Duration::seconds(144))
     }
 }
