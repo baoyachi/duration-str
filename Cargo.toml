@@ -17,7 +17,3 @@ license = "MIT AND Apache-2.0"
 nom = "6"
 anyhow = "1"
 chrono = { version = "0.4.19", optional = true }
-
-
-[dev-dependencies]
-chrono = "0.4.19"
