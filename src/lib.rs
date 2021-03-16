@@ -50,6 +50,9 @@ use nom::sequence::tuple;
 use nom::{IResult, InputTakeAtPosition};
 use std::time::Duration;
 
+#[cfg(feature = "chrono")]
+use chrono::Duration as CDuration;
+
 #[derive(Debug, Eq, PartialEq)]
 enum TimeUnit {
     Year,
@@ -308,7 +311,7 @@ macro_rules! des_duration {
 }
 des_duration!(DurationStd, Duration, deserialize_duration, parse_std);
 
-use chrono::Duration as CDuration;
+
 #[cfg(feature = "chrono")]
 des_duration!(
     DurationChrono,
