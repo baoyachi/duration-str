@@ -311,7 +311,6 @@ macro_rules! des_duration {
 }
 des_duration!(DurationStd, Duration, deserialize_duration, parse_std);
 
-
 #[cfg(feature = "chrono")]
 des_duration!(
     DurationChrono,
@@ -419,7 +418,7 @@ mod tests {
         }
         let json = r#"{"time_ticker":"1y+30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
-        println!("config:{:#?}", config.time_ticker);
+        assert_eq!(config.time_ticker, Duration::new(ONE_YEAR_SECOND + 30, 0));
     }
 
     #[test]
@@ -434,6 +433,9 @@ mod tests {
         }
         let json = r#"{"time_ticker":"1y+30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
-        println!("config:{:#?}", config.time_ticker);
+        assert_eq!(
+            config.time_ticker,
+            Duration::seconds((ONE_YEAR_SECOND + 30) as i64)
+        );
     }
 }
