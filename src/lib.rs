@@ -200,6 +200,7 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit)>> {
     Ok(("", vec))
 }
 
+/// parse string to `std::time::Duration`
 pub fn parse(input: &str) -> anyhow::Result<Duration> {
     let (in_input, ((time_str, time_unit), cond_opt)) =
         tuple((parse_time, opt(cond_time)))(input).map_err(|e| anyhow!("parse error:{}", e))?;
@@ -309,6 +310,7 @@ macro_rules! des_duration {
         }
     };
 }
+
 des_duration!(DurationStd, Duration, deserialize_duration, parse_std);
 
 #[cfg(feature = "chrono")]
