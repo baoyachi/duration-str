@@ -422,8 +422,8 @@ mod tests {
     #[test]
     #[cfg(feature = "chrono")]
     fn test_deserialize_duration_chrono() {
-        use serde::*;
         use chrono::Duration;
+        use serde::*;
         #[derive(Debug, Deserialize)]
         struct Config {
             #[serde(deserialize_with = "deserialize_duration_chrono")]
