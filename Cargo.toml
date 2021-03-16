@@ -14,6 +14,11 @@ license = "MIT AND Apache-2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nom = "6"
-anyhow = "1"
+nom = "6.1.2"
+anyhow = "1.0.38"
 chrono = { version = "0.4.19", optional = true }
+serde = { version = "1.0.124", features = ["derive"] }
+serde_json = "1.0.64"
+
+[dev-dependencies]
+chrono = "0.4.19"

@@ -279,6 +279,44 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duratio
     Ok(duration)
 }
 
+macro_rules! des_duration {
+    ($name:ident,$duration_type:ident,$fn_name:ident,$parse:ident) => {
+        struct $name;
+        impl<'de> serde::de::Visitor<'de> for $name {
+            type Value = $duration_type;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("expect duration string,e.g:'1min+30'")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                let duration = $parse(s).map_err(|s| serde::de::Error::custom(s))?;
+                Ok(duration)
+            }
+        }
+
+        pub fn $fn_name<'de, D>(deserializer: D) -> Result<$duration_type, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer.deserialize_any($name)
+        }
+    };
+}
+des_duration!(DurationStd, Duration, deserialize_duration, parse_std);
+
+use chrono::Duration as CDuration;
+#[cfg(feature = "chrono")]
+des_duration!(
+    DurationChrono,
+    CDuration,
+    deserialize_duration_chrono,
+    parse_chrono
+);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -366,5 +404,33 @@ mod tests {
         use chrono::Duration;
         let duration = parse_chrono("1m+60+24 ").unwrap();
         assert_eq!(duration, Duration::seconds(144))
+    }
+
+    #[test]
+    fn test_deserialize_duration() {
+        use serde::*;
+        #[derive(Debug, Deserialize)]
+        struct Config {
+            #[serde(deserialize_with = "deserialize_duration")]
+            time_ticker: Duration,
+        }
+        let json = r#"{"time_ticker":"1y+30"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        println!("config:{:#?}", config.time_ticker);
+    }
+
+    #[test]
+    #[cfg(feature = "chrono")]
+    fn test_deserialize_duration_chrono() {
+        use serde::*;
+        use chrono::Duration;
+        #[derive(Debug, Deserialize)]
+        struct Config {
+            #[serde(deserialize_with = "deserialize_duration_chrono")]
+            time_ticker: Duration,
+        }
+        let json = r#"{"time_ticker":"1y+30"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        println!("config:{:#?}", config.time_ticker);
     }
 }
