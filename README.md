@@ -45,3 +45,45 @@ fn main() {
 }
 ```
 
+## deserialize in struct
+deserialize to std::time::Duration
+
+```rust
+use duration_str::deserialize_duration;
+use serde::*;
+use std::time::Duration;
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    #[serde(deserialize_with = "deserialize_duration")]
+    time_ticker: Duration,
+}
+
+fn main() {
+    let json = r#"{"time_ticker":"1m+30"}"#;
+    let config: Config = serde_json::from_str(json).unwrap();
+    assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
+}
+```
+
+
+Also you can use `deserialize_duration_chrono` function
+
+```rust
+use chrono::Duration;
+use duration_str::deserialize_duration_chrono;
+use serde::*;
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    #[serde(deserialize_with = "deserialize_duration_chrono")]
+    time_ticker: Duration,
+}
+
+fn main() {
+    let json = r#"{"time_ticker":"1m+30"}"#;
+    let config: Config = serde_json::from_str(json).unwrap();
+    assert_eq!(config.time_ticker, Duration::seconds(60 + 30));
+}
+```
+

@@ -39,6 +39,49 @@
 //!
 //! let duration = parse("1m * 10").unwrap();
 //! assert_eq!(duration,Duration::new(600,0));
+//!
+//! ```
+//!
+//! # deserialize to std::time::Duration
+//! `deserialize_duration` Use in struct.
+//! ```rust
+//! use duration_str::deserialize_duration;
+//! use serde::*;
+//! use std::time::Duration;
+//!
+//! #[derive(Debug, Deserialize)]
+//! struct Config {
+//!     #[serde(deserialize_with = "deserialize_duration")]
+//!     time_ticker: Duration,
+//! }
+//!
+//! fn main() {
+//!     let json = r#"{"time_ticker":"1m+30"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
+//! }
+//!
+//! ```
+//!
+//!
+//! # Also use `deserialize_duration_chrono` function with chrono:Duration
+//!
+//! ```rust
+//! use chrono::Duration;
+//! use duration_str::deserialize_duration_chrono;
+//! use serde::*;
+//!
+//! #[derive(Debug, Deserialize)]
+//! struct Config {
+//!     #[serde(deserialize_with = "deserialize_duration_chrono")]
+//!     time_ticker: Duration,
+//! }
+//!
+//! fn main() {
+//!     let json = r#"{"time_ticker":"1m+30"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(config.time_ticker, Duration::seconds(60 + 30));
+//! }
 //! ```
 //!
 
@@ -297,7 +340,7 @@ macro_rules! des_duration {
             where
                 E: serde::de::Error,
             {
-                let duration = $parse(s).map_err(|s| serde::de::Error::custom(s))?;
+                let duration = $parse(s).map_err(serde::de::Error::custom)?;
                 Ok(duration)
             }
         }
