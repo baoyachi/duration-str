@@ -7,7 +7,7 @@
 
 Parse string to `Duration` . The String value unit support for one of:`[y,mon,w,d,h,m,s]`
 - y:Year. Support string value: `["y" | "year" | "Y" | "YEAR" | "Year"]`. e.g. 1y
-- mon:Month.Support string value:` ["mon" | "MON" | "Month" | "month" | "MONTH"]. e.g. 1mon
+- mon:Month.Support string value:`["mon" | "MON" | "Month" | "month" | "MONTH"]`. e.g. 1mon
 - w:Week.Support string value: `["w" | "W" | "Week" | "WEEK" | "week"]`. e.g. 1w
 - d:Day.Support string value: `["d" | "D" | "Day" | "DAY" | "day"]`. e.g. 1d
 - h:Hour.Support string value: `["h" | "H" | "Hour" | "HOUR" | "hour"]`. e.g. 1h
