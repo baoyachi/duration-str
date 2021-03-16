@@ -20,7 +20,7 @@ Also,`duration_str` support time duration simple evaluation(+,*). See example:
 ## example
 ```toml
 [dependencies]
-duration-str = "0.1" 
+duration-str = "0.2" 
 ```
 
 ```rust
