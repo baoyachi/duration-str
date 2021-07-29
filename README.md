@@ -12,7 +12,10 @@ Parse string to `Duration` . The String value unit support for one of:`[y,mon,w,
 - d:Day.Support string value: `["d" | "D" | "Day" | "DAY" | "day"]`. e.g. 1d
 - h:Hour.Support string value: `["h" | "H" | "Hour" | "HOUR" | "hour"]`. e.g. 1h
 - m:Minute.Support string value: `["m" | "M" | "Minute" | "MINUTE" | "minute"]`. e.g. 1m
-- m:Second.Support string value: `["s" | "S" | "Second" | "SECOND" | "second"]`. e.g. 1s
+- s:Second.Support string value: `["s" | "S" | "Second" | "SECOND" | "second"]`. e.g. 1s
+- ms:Millisecond.Support string value: `["ms" | "MS" | "Millisecond" | "MilliSecond" | "MILLISECOND" | "millisecond", "mSEC"]`. e.g. 1ms
+- µs:Microsecond.Support string value: `["µs" | "µS" | "µsecond" | "Microsecond" | "MicroSecond" | "MICROSECOND" | "microsecond", "µSEC"]`. e.g. 1µs
+- ns:Nanosecond.Support string value: `["ns" | "NS" | "Nanosecond" | "NanoSecond" | "NANOSECOND" | "nanosecond", "nSEC"]`. e.g. 1ns
 
 Also,`duration_str` support time duration simple evaluation(+,*). See example:
 
