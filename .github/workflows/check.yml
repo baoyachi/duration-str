@@ -35,6 +35,10 @@ jobs:
         run: cargo build --release
       - name: Run tests
         run: cargo test
+      - name: Run examples with deserialize_duration
+        run: cargo run --example deserialize_duration
+      - name: Run examples with deserialize_duration_chrono
+        run: cargo run --example deserialize_duration_chrono
 
       # build on nightly
       - uses: actions-rs/toolchain@v1

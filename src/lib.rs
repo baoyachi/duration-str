@@ -32,20 +32,34 @@
 //! use std::time::Duration;
 //!
 //! let duration = parse("1d").unwrap();
-//! assert_eq!(duration,Duration::new(24*60*60,0));
+//! assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
 //!
-//! let duration = parse("3m+31").unwrap();
-//! assert_eq!(duration,Duration::new(211,0));
+//! let duration = parse("3m+31").unwrap(); //the default duration unit is second.
+//! assert_eq!(duration, Duration::new(211, 0));
 //!
-//! let duration = parse("3m + 31").unwrap();
-//! assert_eq!(duration,Duration::new(211,0));
+//! let duration = parse("3m + 31").unwrap(); //the default duration unit is second.
+//! assert_eq!(duration, Duration::new(211, 0));
 //!
-//! let duration = parse("1m*10").unwrap();
-//! assert_eq!(duration,Duration::new(600,0));
+//! let duration = parse("3m + 13s + 29ms").unwrap();
+//! assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
 //!
-//! let duration = parse("1m * 10").unwrap();
-//! assert_eq!(duration,Duration::new(600,0));
+//! let duration = parse("3m + 1s + 29ms +17µs").unwrap();
+//! assert_eq!(
+//!     duration,
+//!     Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+//! );
 //!
+//! let duration = parse("1m*10").unwrap(); //the default duration unit is second.
+//! assert_eq!(duration, Duration::new(600, 0));
+//!
+//! let duration = parse("1m*10ms").unwrap();
+//! assert_eq!(duration, Duration::new(0, 600 * 1000 * 1000));
+//!
+//! let duration = parse("1m * 1ns").unwrap();
+//! assert_eq!(duration, Duration::new(0, 60));
+//!
+//! let duration = parse("1m * 1m").unwrap();
+//! assert_eq!(duration, Duration::new(3600, 0));
 //! let duration = parse("42µs").unwrap();
 //! assert_eq!(duration,Duration::from_micros(42));
 //!
@@ -64,8 +78,12 @@
 //!     time_ticker: Duration,
 //! }
 //!
-//! fn main() {
+//! fn needless_main() {
 //!     let json = r#"{"time_ticker":"1m+30"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
+//!
+//!     let json = r#"{"time_ticker":"1m+30s"}"#;
 //!     let config: Config = serde_json::from_str(json).unwrap();
 //!     assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
 //! }
@@ -86,7 +104,7 @@
 //!     time_ticker: Duration,
 //! }
 //!
-//! fn main() {
+//! fn needless_main() {
 //!     let json = r#"{"time_ticker":"1m+30"}"#;
 //!     let config: Config = serde_json::from_str(json).unwrap();
 //!     assert_eq!(config.time_ticker, Duration::seconds(60 + 30));
@@ -105,6 +123,8 @@ use std::time::Duration;
 
 #[cfg(feature = "chrono")]
 use chrono::Duration as CDuration;
+use rust_decimal::prelude::ToPrimitive;
+use rust_decimal::Decimal;
 
 #[derive(Debug, Eq, PartialEq)]
 enum TimeUnit {
@@ -129,6 +149,11 @@ const ONE_DAY_NANOSECOND: u64 = 24 * ONE_HOUR_NANOSECOND;
 const ONE_WEEK_NANOSECOND: u64 = 7 * ONE_DAY_NANOSECOND;
 const ONE_MONTH_NANOSECOND: u64 = 30 * ONE_DAY_NANOSECOND;
 const ONE_YEAR_NANOSECOND: u64 = 365 * ONE_DAY_NANOSECOND;
+
+// const ONE_SECOND_DECIMAL: Decimal = 1_000_000_000.into();
+fn one_second_decimal() -> Decimal {
+    1_000_000_000.into()
+}
 
 impl TimeUnit {
     fn duration(&self, time_str: &str) -> anyhow::Result<u64> {
@@ -160,20 +185,26 @@ enum CondUnit {
 
 impl CondUnit {
     fn init() -> (Self, u64) {
-        (CondUnit::Star, 1)
+        (CondUnit::Star, ONE_SECOND_NANOSECOND)
     }
 
     fn change_duration(&self) -> u64 {
         match self {
             CondUnit::Plus => 0,
-            CondUnit::Star => 1,
+            CondUnit::Star => ONE_SECOND_NANOSECOND,
         }
     }
 
     fn calc(&self, x: u64, y: u64) -> Duration {
         let nano_second = match self {
-            CondUnit::Plus => x + y * ONE_SECOND_NANOSECOND,
-            CondUnit::Star => x * y,
+            CondUnit::Plus => x + y,
+            CondUnit::Star => {
+                let x: Decimal = x.into();
+                let y: Decimal = y.into();
+                let ret =
+                    (x / one_second_decimal()) * (y / one_second_decimal()) * one_second_decimal();
+                ret.to_u64().unwrap() //TODO fix unwrap
+            }
         };
         Duration::from_nanos(nano_second)
     }
@@ -183,10 +214,10 @@ trait Calc<T> {
     fn calc(&self) -> anyhow::Result<T>;
 }
 
-impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit)> {
+impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
     fn calc(&self) -> anyhow::Result<(CondUnit, u64)> {
         let (mut init_cond, mut init_duration) = CondUnit::init();
-        for (index, (val, cond)) in self.iter().enumerate() {
+        for (index, (val, cond, time_unit)) in self.iter().enumerate() {
             if index == 0 {
                 init_cond = cond.clone();
                 init_duration = init_cond.change_duration();
@@ -197,10 +228,15 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit)> {
                     cond.to_string()
                 ));
             }
-
             match init_cond {
-                CondUnit::Plus => init_duration += val.parse::<u64>()?,
-                CondUnit::Star => init_duration *= val.parse::<u64>()?,
+                CondUnit::Plus => init_duration += time_unit.duration(val)?,
+                CondUnit::Star => {
+                    let time: Decimal = time_unit.duration(val)?.into();
+                    let i = time / one_second_decimal();
+                    let mut init: Decimal = init_duration.into();
+                    init *= i;
+                    init_duration = init.to_u64().unwrap();
+                }
             }
         }
         Ok((init_cond, init_duration))
@@ -251,8 +287,8 @@ fn cond_unit(input: &str) -> IResult<&str, CondUnit> {
     let (input, out) =
         input.split_at_position1_complete(|item| !matches!(item, '+' | '*'), ErrorKind::Char)?;
     match out {
-        "+" => Ok((input, CondUnit::Plus)),
-        "*" => Ok((input, CondUnit::Star)),
+        PLUS => Ok((input, CondUnit::Plus)),
+        STAR => Ok((input, CondUnit::Star)),
         _ => Err(nom::Err::Error(nom::error::Error::new(
             "expect one of [+,*]",
             ErrorKind::Char,
@@ -264,14 +300,19 @@ fn parse_time(input: &str) -> IResult<&str, (&str, TimeUnit)> {
     tuple((digit1, time_unit))(input)
 }
 
-fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit)>> {
+fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit, TimeUnit)>> {
     let mut vec = vec![];
     let mut input = input;
     while !input.trim().is_empty() {
-        let (in_input, (_, cond, _, out)) =
-            tuple((multispace0, cond_unit, multispace0, digit1))(input)?;
+        let (in_input, (_, cond, _, out, opt_unit)) =
+            tuple((multispace0, cond_unit, multispace0, digit1, opt(unit1)))(input)?;
         input = in_input;
-        vec.push((out, cond));
+        if let Some(unit) = opt_unit {
+            let (_, time_unit) = time_unit(unit)?;
+            vec.push((out, cond, time_unit));
+        } else {
+            vec.push((out, cond, TimeUnit::Second));
+        }
     }
     Ok(("", vec))
 }
@@ -287,7 +328,6 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
             in_input
         ));
     }
-
     let (init_cond, init_duration) = cond_opt
         .map(|val| val.calc())
         .unwrap_or_else(|| Ok(CondUnit::init()))?;
@@ -427,14 +467,20 @@ mod tests {
     fn test_cond_time() {
         let (input, out) = cond_time(" * 60").unwrap();
         assert_eq!(input, "");
-        assert_eq!(out, vec![("60", CondUnit::Star)]);
+        assert_eq!(out, vec![("60", CondUnit::Star, TimeUnit::Second)]);
     }
 
     #[test]
     fn test_cond_time2() {
         let (input, out) = cond_time(" * 60*30").unwrap();
         assert_eq!(input, "");
-        assert_eq!(out, vec![("60", CondUnit::Star), ("30", CondUnit::Star),]);
+        assert_eq!(
+            out,
+            vec![
+                ("60", CondUnit::Star, TimeUnit::Second),
+                ("30", CondUnit::Star, TimeUnit::Second)
+            ]
+        );
     }
 
     #[test]
@@ -518,5 +564,38 @@ mod tests {
             config.time_ticker,
             Duration::nanoseconds(ONE_YEAR_NANOSECOND as i64) + Duration::seconds(30)
         );
+    }
+
+    #[test]
+    fn test_parse() {
+        let duration = parse("1d").unwrap();
+        assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
+
+        let duration = parse("3m+31").unwrap(); //the default duration unit is second.
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("3m + 31").unwrap(); //the default duration unit is second.
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("3m + 13s + 29ms").unwrap();
+        assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
+
+        let duration = parse("3m + 1s + 29ms +17µs").unwrap();
+        assert_eq!(
+            duration,
+            Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+        );
+
+        let duration = parse("1m*10").unwrap(); //the default duration unit is second.
+        assert_eq!(duration, Duration::new(600, 0));
+
+        let duration = parse("1m*10ms").unwrap();
+        assert_eq!(duration, Duration::new(0, 600 * 1000 * 1000));
+
+        let duration = parse("1m * 1ns").unwrap();
+        assert_eq!(duration, Duration::new(0, 60));
+
+        let duration = parse("1m * 1m").unwrap();
+        assert_eq!(duration, Duration::new(3600, 0));
     }
 }
