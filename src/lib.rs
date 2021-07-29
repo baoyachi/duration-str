@@ -1,6 +1,6 @@
 //! Parse string to `Duration` .
 //!
-//! The String value unit support for one of:["y","mon","w","d","h","m","s"]
+//! The String value unit support for one of:["y","mon","w","d","h","m","s", "ms", "µs", "ns"]
 //!
 //! - y:Year. Support string value: ["y" | "year" | "Y" | "YEAR" | "Year"]. e.g. 1y
 //!
@@ -14,7 +14,13 @@
 //!
 //! - m:Minute.Support string value: ["m" | "M" | "Minute" | "MINUTE" | "minute"]. e.g. 1m
 //!
-//! - m:Second.Support string value: ["s" | "S" | "Second" | "SECOND" | "second"]. e.g. 1s
+//! - s:Second.Support string value: ["s" | "S" | "Second" | "SECOND" | "second", "sec"]. e.g. 1s
+//!
+//! - ms:Millisecond.Support string value: ["ms" | "MS" | "Millisecond" | "MilliSecond" | "MILLISECOND" | "millisecond", "mSEC"]. e.g. 1ms
+//!
+//! - µs:Microsecond.Support string value: ["µs" | "µS" | "µsecond" | "Microsecond" | "MicroSecond" | "MICROSECOND" | "microsecond", "µSEC"]. e.g. 1µs
+//!
+//! - ns:Nanosecond.Support string value: ["ns" | "NS" | "Nanosecond" | "NanoSecond" | "NANOSECOND" | "nanosecond", "nSEC"]. e.g. 1ns
 //!
 //! Also,`duration_str` support time duration simple evaluation(+,*). See example:
 //!
@@ -39,6 +45,9 @@
 //!
 //! let duration = parse("1m * 10").unwrap();
 //! assert_eq!(duration,Duration::new(600,0));
+//!
+//! let duration = parse("42µs").unwrap();
+//! assert_eq!(duration,Duration::from_micros(42));
 //!
 //! ```
 //!
@@ -86,10 +95,11 @@
 //!
 
 use anyhow::anyhow;
-use nom::character::complete::{alpha1, digit1, multispace0};
+use nom::character::complete::{digit1, multispace0};
 use nom::combinator::opt;
-use nom::error::ErrorKind;
+use nom::error::{ErrorKind, ParseError};
 use nom::sequence::tuple;
+use nom::AsChar;
 use nom::{IResult, InputTakeAtPosition};
 use std::time::Duration;
 
@@ -105,26 +115,35 @@ enum TimeUnit {
     Hour,
     Minute,
     Second,
+    MilliSecond,
+    MicroSecond,
+    NanoSecond,
 }
 
-const ONE_MINUTE_SECOND: u64 = 60;
-const ONE_HOUR_SECOND: u64 = ONE_MINUTE_SECOND * ONE_MINUTE_SECOND;
-const ONE_DAY_SECOND: u64 = 24 * ONE_HOUR_SECOND;
-const ONE_WEEK_SECOND: u64 = 7 * ONE_DAY_SECOND;
-const ONE_MONTH_SECOND: u64 = 30 * ONE_DAY_SECOND;
-const ONE_YEAR_SECOND: u64 = 365 * ONE_DAY_SECOND;
+const ONE_MICROSECOND_NANOSECOND: u64 = 1000;
+const ONE_MILLISECOND_NANOSECOND: u64 = 1000 * ONE_MICROSECOND_NANOSECOND;
+const ONE_SECOND_NANOSECOND: u64 = 1000 * ONE_MILLISECOND_NANOSECOND;
+const ONE_MINUTE_NANOSECOND: u64 = 60 * ONE_SECOND_NANOSECOND;
+const ONE_HOUR_NANOSECOND: u64 = 60 * ONE_MINUTE_NANOSECOND;
+const ONE_DAY_NANOSECOND: u64 = 24 * ONE_HOUR_NANOSECOND;
+const ONE_WEEK_NANOSECOND: u64 = 7 * ONE_DAY_NANOSECOND;
+const ONE_MONTH_NANOSECOND: u64 = 30 * ONE_DAY_NANOSECOND;
+const ONE_YEAR_NANOSECOND: u64 = 365 * ONE_DAY_NANOSECOND;
 
 impl TimeUnit {
     fn duration(&self, time_str: &str) -> anyhow::Result<u64> {
         let time = time_str.parse::<u64>()?;
         let unit = match self {
-            TimeUnit::Year => ONE_YEAR_SECOND,
-            TimeUnit::Month => ONE_MONTH_SECOND,
-            TimeUnit::Week => ONE_WEEK_SECOND,
-            TimeUnit::Day => ONE_DAY_SECOND,
-            TimeUnit::Hour => ONE_HOUR_SECOND,
-            TimeUnit::Minute => ONE_MINUTE_SECOND,
-            TimeUnit::Second => 1,
+            TimeUnit::Year => ONE_YEAR_NANOSECOND,
+            TimeUnit::Month => ONE_MONTH_NANOSECOND,
+            TimeUnit::Week => ONE_WEEK_NANOSECOND,
+            TimeUnit::Day => ONE_DAY_NANOSECOND,
+            TimeUnit::Hour => ONE_HOUR_NANOSECOND,
+            TimeUnit::Minute => ONE_MINUTE_NANOSECOND,
+            TimeUnit::Second => ONE_SECOND_NANOSECOND,
+            TimeUnit::MilliSecond => ONE_MILLISECOND_NANOSECOND,
+            TimeUnit::MicroSecond => ONE_MICROSECOND_NANOSECOND,
+            TimeUnit::NanoSecond => 1,
         };
         Ok(time * unit)
     }
@@ -152,11 +171,11 @@ impl CondUnit {
     }
 
     fn calc(&self, x: u64, y: u64) -> Duration {
-        let second = match self {
-            CondUnit::Plus => x + y,
+        let nano_second = match self {
+            CondUnit::Plus => x + y * ONE_SECOND_NANOSECOND,
             CondUnit::Star => x * y,
         };
-        Duration::new(second, 0)
+        Duration::from_nanos(nano_second)
     }
 }
 
@@ -197,18 +216,32 @@ impl ToString for CondUnit {
     }
 }
 
+fn unit1<T, E: ParseError<T>>(input: T) -> IResult<T, T, E>
+where
+    T: InputTakeAtPosition,
+    <T as InputTakeAtPosition>::Item: AsChar + Copy,
+{
+    input.split_at_position1_complete(
+        |item| !(item.is_alpha() || item.as_char() == 'µ'),
+        ErrorKind::Alpha,
+    )
+}
+
 fn time_unit(input: &str) -> IResult<&str, TimeUnit> {
-    let (input, out) = alpha1(input)?;
-    match out {
-        "y" | "year" | "Y" | "YEAR" | "Year" => Ok((input, TimeUnit::Year)),
-        "mon" | "MON" | "Month" | "month" | "MONTH" => Ok((input, TimeUnit::Month)),
-        "w" | "W" | "Week" | "WEEK" | "week" => Ok((input, TimeUnit::Week)),
-        "d" | "D" | "Day" | "DAY" | "day" => Ok((input, TimeUnit::Day)),
-        "h" | "H" | "Hour" | "HOUR" | "hour" => Ok((input, TimeUnit::Hour)),
-        "m" | "M" | "Minute" | "MINUTE" | "minute" => Ok((input, TimeUnit::Minute)),
-        "s" | "S" | "Second" | "SECOND" | "second" => Ok((input, TimeUnit::Second)),
+    let (input, out) = unit1(input)?;
+    match out.to_lowercase().as_str() {
+        "y" | "year" => Ok((input, TimeUnit::Year)),
+        "mon" | "month" => Ok((input, TimeUnit::Month)),
+        "w" | "week" => Ok((input, TimeUnit::Week)),
+        "d" | "day" => Ok((input, TimeUnit::Day)),
+        "h" | "hour" => Ok((input, TimeUnit::Hour)),
+        "m" | "min" | "minute" => Ok((input, TimeUnit::Minute)),
+        "s" | "sec" | "second" => Ok((input, TimeUnit::Second)),
+        "ms" | "msec" | "millisecond" => Ok((input, TimeUnit::MilliSecond)),
+        "µs" | "µsec" | "µsecond" | "microsecond" => Ok((input, TimeUnit::MicroSecond)),
+        "ns" | "nsec" | "nanosecond" => Ok((input, TimeUnit::NanoSecond)),
         _ => Err(nom::Err::Error(nom::error::Error::new(
-            "expect one of [y,mon,w,d,h,m,s]",
+            "expect one of [y,mon,w,d,h,m,s,ms,µs,ns]",
             ErrorKind::Alpha,
         ))),
     }
@@ -463,7 +496,10 @@ mod tests {
         }
         let json = r#"{"time_ticker":"1y+30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
-        assert_eq!(config.time_ticker, Duration::new(ONE_YEAR_SECOND + 30, 0));
+        assert_eq!(
+            config.time_ticker,
+            Duration::from_nanos(ONE_YEAR_NANOSECOND) + Duration::from_secs(30)
+        );
     }
 
     #[test]
@@ -480,7 +516,7 @@ mod tests {
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(
             config.time_ticker,
-            Duration::seconds((ONE_YEAR_SECOND + 30) as i64)
+            Duration::nanoseconds(ONE_YEAR_NANOSECOND as i64) + Duration::seconds(30)
         );
     }
 }
