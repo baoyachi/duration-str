@@ -195,7 +195,7 @@ impl CondUnit {
         }
     }
 
-    fn calc(&self, x: u64, y: u64) -> Duration {
+    fn calc(&self, x: u64, y: u64) -> anyhow::Result<Duration> {
         let nano_second = match self {
             CondUnit::Plus => x + y,
             CondUnit::Star => {
@@ -203,10 +203,11 @@ impl CondUnit {
                 let y: Decimal = y.into();
                 let ret =
                     (x / one_second_decimal()) * (y / one_second_decimal()) * one_second_decimal();
-                ret.to_u64().unwrap() //TODO fix unwrap
+                ret.to_u64()
+                    .ok_or_else(|| anyhow!("type of Decimal:{} convert to u64 error", ret))?
             }
         };
-        Duration::from_nanos(nano_second)
+        Ok(Duration::from_nanos(nano_second))
     }
 }
 
@@ -235,7 +236,9 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
                     let i = time / one_second_decimal();
                     let mut init: Decimal = init_duration.into();
                     init *= i;
-                    init_duration = init.to_u64().unwrap();
+                    init_duration = init
+                        .to_u64()
+                        .ok_or_else(|| anyhow!("type of Decimal:{} convert to u64 error", init))?;
                 }
             }
         }
@@ -332,7 +335,7 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
         .map(|val| val.calc())
         .unwrap_or_else(|| Ok(CondUnit::init()))?;
     let unit_time = time_unit.duration(time_str)?;
-    let duration = init_cond.calc(unit_time, init_duration);
+    let duration = init_cond.calc(unit_time, init_duration)?;
     Ok(duration)
 }
 
