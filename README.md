@@ -5,7 +5,12 @@
 [![Docs.rs](https://docs.rs/duration-str/badge.svg)](https://docs.rs/duration-str)
 
 
-Parse string to `Duration` . The String value unit support for one of:`[y,mon,w,d,h,m,s]`
+## Notice ⚠️
+The default duration unit is second.Also use below **duration unit** 
+
+## Duration Unit List
+
+Parse string to `Duration` . The String duration unit support for one of:`["y","mon","w","d","h","m","s", "ms", "µs", "ns"]`
 - y:Year. Support string value: `["y" | "year" | "Y" | "YEAR" | "Year"]`. e.g. 1y
 - mon:Month.Support string value:`["mon" | "MON" | "Month" | "month" | "MONTH"]`. e.g. 1mon
 - w:Week.Support string value: `["w" | "W" | "Week" | "WEEK" | "week"]`. e.g. 1w
@@ -32,19 +37,34 @@ use std::time::Duration;
 
 fn main() {
     let duration = parse("1d").unwrap();
-    assert_eq!(duration,Duration::new(24*60*60,0));
+    assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
 
-    let duration = parse("3m+31").unwrap();
-    assert_eq!(duration,Duration::new(211,0));
+    let duration = parse("3m+31").unwrap(); //the default duration unit is second.
+    assert_eq!(duration, Duration::new(211, 0));
 
-    let duration = parse("3m + 31").unwrap();
-    assert_eq!(duration,Duration::new(211,0));
+    let duration = parse("3m + 31").unwrap(); //the default duration unit is second.
+    assert_eq!(duration, Duration::new(211, 0));
 
-    let duration = parse("1m*10").unwrap();
-    assert_eq!(duration,Duration::new(600,0));
+    let duration = parse("3m + 13s + 29ms").unwrap();
+    assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
 
-    let duration = parse("1m * 10").unwrap();
-    assert_eq!(duration,Duration::new(600,0));
+    let duration = parse("3m + 1s + 29ms +17µs").unwrap();
+    assert_eq!(
+        duration,
+        Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+    );
+
+    let duration = parse("1m*10").unwrap(); //the default duration unit is second.
+    assert_eq!(duration, Duration::new(600, 0));
+
+    let duration = parse("1m*10ms").unwrap();
+    assert_eq!(duration, Duration::new(0, 600 * 1000 * 1000));
+
+    let duration = parse("1m * 1ns").unwrap();
+    assert_eq!(duration, Duration::new(0, 60));
+
+    let duration = parse("1m * 1m").unwrap();
+    assert_eq!(duration, Duration::new(3600, 0));
 }
 ```
 
@@ -64,6 +84,10 @@ struct Config {
 
 fn main() {
     let json = r#"{"time_ticker":"1m+30"}"#;
+    let config: Config = serde_json::from_str(json).unwrap();
+    assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
+
+    let json = r#"{"time_ticker":"1m+30s"}"#;
     let config: Config = serde_json::from_str(json).unwrap();
     assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
 }
