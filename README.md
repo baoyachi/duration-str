@@ -11,16 +11,17 @@ The default duration unit is second.Also use below **duration unit**
 ## Duration Unit List
 
 Parse string to `Duration` . The String duration unit support for one of:`["y","mon","w","d","h","m","s", "ms", "µs", "ns"]`
-- y:Year. Support string value: `["y" | "year" | "Y" | "YEAR" | "Year"]`. e.g. 1y
-- mon:Month.Support string value:`["mon" | "MON" | "Month" | "month" | "MONTH"]`. e.g. 1mon
-- w:Week.Support string value: `["w" | "W" | "Week" | "WEEK" | "week"]`. e.g. 1w
-- d:Day.Support string value: `["d" | "D" | "Day" | "DAY" | "day"]`. e.g. 1d
-- h:Hour.Support string value: `["h" | "H" | "Hour" | "HOUR" | "hour"]`. e.g. 1h
-- m:Minute.Support string value: `["m" | "M" | "Minute" | "MINUTE" | "minute"]`. e.g. 1m
-- s:Second.Support string value: `["s" | "S" | "Second" | "SECOND" | "second"]`. e.g. 1s
-- ms:Millisecond.Support string value: `["ms" | "MS" | "Millisecond" | "MilliSecond" | "MILLISECOND" | "millisecond", "mSEC"]`. e.g. 1ms
-- µs:Microsecond.Support string value: `["µs" | "µS" | "µsecond" | "Microsecond" | "MicroSecond" | "MICROSECOND" | "microsecond", "µSEC"]`. e.g. 1µs
-- ns:Nanosecond.Support string value: `["ns" | "NS" | "Nanosecond" | "NanoSecond" | "NANOSECOND" | "nanosecond", "nSEC"]`. e.g. 1ns
+
+* y:Year. Support string value: ["y" | "year" | "Y" | "YEAR" | "Year"]. e.g. 1y
+* mon:Month.Support string value: ["mon" | "MON" | "Month" | "month" | "MONTH"]. e.g. 1mon
+* w:Week.Support string value: ["w" | "W" | "Week" | "WEEK" | "week"]. e.g. 1w
+* d:Day.Support string value: ["d" | "D" | "Day" | "DAY" | "day"]. e.g. 1d
+* h:Hour.Support string value: ["h" | "H" | "Hour" | "HOUR" | "hour"]. e.g. 1h
+* m:Minute.Support string value: ["m" | "M" | "Minute" | "MINUTE" | "minute" | "min" | "MIN"]. e.g. 1m
+* s:Second.Support string value: ["s" | "S" | "Second" | "SECOND" | "second" | "sec" | "SEC"]. e.g. 1s
+* ms:Millisecond.Support string value: ["ms" | "MS" | "Millisecond" | "MilliSecond" | "MILLISECOND" | "millisecond" | "mSEC" ]. e.g. 1ms
+* µs:Microsecond.Support string value: ["µs" | "µS" | "µsecond" | "Microsecond" | "MicroSecond" | "MICROSECOND" | "microsecond" | "µSEC"]. e.g. 1µs
+* ns:Nanosecond.Support string value: ["ns" | "NS" | "Nanosecond" | "NanoSecond" | "NANOSECOND" | "nanosecond" | "nSEC"]. e.g. 1ns
 
 Also,`duration_str` support time duration simple evaluation(+,*). See example:
 
