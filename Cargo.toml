@@ -1,13 +1,13 @@
 [package]
 name = "duration-str"
-version = "0.3.3"
+version = "0.3.4"
 authors = ["baoyachi <liaoymxsdl@gmail.com>"]
 edition = "2018"
 description = "duration string parser"
 keywords = ["duration", "time", "duration-string", "duration-parser", "time-parser"]
 readme = "README.md"
 categories = ["parsing", "date-and-time"]
-repository = "https://github.com/baoyachi/duration-str-rs"
+repository = "https://github.com/baoyachi/duration-str"
 license = "MIT AND Apache-2.0"
 
 
