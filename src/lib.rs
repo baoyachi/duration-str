@@ -404,11 +404,17 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duratio
 }
 
 #[cfg(feature = "chrono")]
-pub fn parse_naive_date<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
+pub fn parse_naive_date_time<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
     let std_duration = parse_std(input)?;
     let duration = chrono::Duration::from_std(std_duration)?;
     let time = (Utc::now() + duration).naive_utc();
     Ok(time)
+}
+
+#[cfg(feature = "chrono")]
+pub fn parse_naive_date<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDate> {
+    let date = parse_naive_date_time(input)?;
+    Ok(date.date())
 }
 
 macro_rules! des_duration {
@@ -610,6 +616,14 @@ mod tests {
 
         let duration = parse("1m * 1m").unwrap();
         assert_eq!(duration, Duration::new(3600, 0));
+    }
+
+    #[test]
+    fn test_parse_naive_date_time() {
+        let date = Utc::now().naive_utc().date();
+        let jd = date.num_days_from_ce() + 180;
+        let date = parse_naive_date_time("180d").unwrap();
+        assert_eq!(date.num_days_from_ce(), jd)
     }
 
     #[test]
