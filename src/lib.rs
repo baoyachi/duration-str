@@ -405,8 +405,7 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duratio
 
 #[cfg(feature = "chrono")]
 pub fn parse_naive_date_time<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
-    let std_duration = parse_std(input)?;
-    let duration = chrono::Duration::from_std(std_duration)?;
+    let duration = parse_chrono(input)?;
     let time = (Utc::now() + duration).naive_utc();
     Ok(time)
 }
