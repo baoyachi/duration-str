@@ -123,6 +123,7 @@ use std::time::Duration;
 
 #[cfg(feature = "chrono")]
 use chrono::Duration as CDuration;
+use chrono::Utc;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 
@@ -256,9 +257,9 @@ impl ToString for CondUnit {
 }
 
 fn unit1<T, E: ParseError<T>>(input: T) -> IResult<T, T, E>
-where
-    T: InputTakeAtPosition,
-    <T as InputTakeAtPosition>::Item: AsChar + Copy,
+    where
+        T: InputTakeAtPosition,
+        <T as InputTakeAtPosition>::Item: AsChar + Copy,
 {
     input.split_at_position1_complete(
         |item| !(item.is_alpha() || item.as_char() == 'µ'),
@@ -402,6 +403,15 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duratio
     Ok(duration)
 }
 
+
+#[cfg(feature = "chrono")]
+pub fn parse_naive_date<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
+    let std_duration = parse_std(input)?;
+    let duration = chrono::Duration::from_std(std_duration)?;
+    let time = (Utc::now() + duration).naive_utc();
+    Ok(time)
+}
+
 macro_rules! des_duration {
     ($name:ident,$duration_type:ident,$fn_name:ident,$parse:ident) => {
         struct $name;
@@ -442,6 +452,7 @@ des_duration!(
 
 #[cfg(test)]
 mod tests {
+    use chrono::{Datelike, Utc};
     use super::*;
 
     #[test]
@@ -481,7 +492,7 @@ mod tests {
             out,
             vec![
                 ("60", CondUnit::Star, TimeUnit::Second),
-                ("30", CondUnit::Star, TimeUnit::Second)
+                ("30", CondUnit::Star, TimeUnit::Second),
             ]
         );
     }
@@ -600,5 +611,13 @@ mod tests {
 
         let duration = parse("1m * 1m").unwrap();
         assert_eq!(duration, Duration::new(3600, 0));
+    }
+
+    #[test]
+    fn test_parse_naive_date() {
+        let date = Utc::now().naive_utc().date();
+        let jd = date.num_days_from_ce() + 180;
+        let date = parse_naive_date("180d").unwrap();
+        assert_eq!(date.num_days_from_ce(), jd)
     }
 }
