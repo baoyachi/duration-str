@@ -257,9 +257,9 @@ impl ToString for CondUnit {
 }
 
 fn unit1<T, E: ParseError<T>>(input: T) -> IResult<T, T, E>
-    where
-        T: InputTakeAtPosition,
-        <T as InputTakeAtPosition>::Item: AsChar + Copy,
+where
+    T: InputTakeAtPosition,
+    <T as InputTakeAtPosition>::Item: AsChar + Copy,
 {
     input.split_at_position1_complete(
         |item| !(item.is_alpha() || item.as_char() == 'µ'),
@@ -403,7 +403,6 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duratio
     Ok(duration)
 }
 
-
 #[cfg(feature = "chrono")]
 pub fn parse_naive_date<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
     let std_duration = parse_std(input)?;
@@ -452,8 +451,8 @@ des_duration!(
 
 #[cfg(test)]
 mod tests {
-    use chrono::{Datelike, Utc};
     use super::*;
+    use chrono::{Datelike, Utc};
 
     #[test]
     fn test_time_unit() {
