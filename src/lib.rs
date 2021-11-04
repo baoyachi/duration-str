@@ -658,7 +658,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_naive_date_time() {
+    fn test_after_naive_date_time() {
         let date = Utc::now().naive_utc().date();
         let jd = date.num_days_from_ce() + 180;
         let date = after_naive_date_time("180d").unwrap();
@@ -670,6 +670,22 @@ mod tests {
         let date = Utc::now().naive_utc().date();
         let jd = date.num_days_from_ce() + 180;
         let date = after_naive_date("180d").unwrap();
+        assert_eq!(date.num_days_from_ce(), jd)
+    }
+
+    #[test]
+    fn test_before_naive_date_time() {
+        let date = Utc::now().naive_utc().date();
+        let jd = date.num_days_from_ce() - 180;
+        let date = before_naive_date_time("180d").unwrap();
+        assert_eq!(date.num_days_from_ce(), jd)
+    }
+
+    #[test]
+    fn test_before_naive_date() {
+        let date = Utc::now().naive_utc().date();
+        let jd = date.num_days_from_ce() - 180;
+        let date = before_naive_date("180d").unwrap();
         assert_eq!(date.num_days_from_ce(), jd)
     }
 }
