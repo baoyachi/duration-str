@@ -123,9 +123,13 @@ use std::time::Duration;
 
 #[cfg(feature = "chrono")]
 use chrono::Duration as CDuration;
-use chrono::Utc;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
+
+#[cfg(feature = "chrono")]
+pub use naive_date::{
+    after_naive_date, after_naive_date_time, before_naive_date, before_naive_date_time,
+};
 
 #[derive(Debug, Eq, PartialEq)]
 enum TimeUnit {
@@ -403,17 +407,53 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duratio
     Ok(duration)
 }
 
-#[cfg(feature = "chrono")]
-pub fn parse_naive_date_time<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
-    let duration = parse_chrono(input)?;
-    let time = (Utc::now() + duration).naive_utc();
-    Ok(time)
-}
+mod naive_date {
+    use crate::parse_chrono;
+    use chrono::Utc;
 
-#[cfg(feature = "chrono")]
-pub fn parse_naive_date<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDate> {
-    let date = parse_naive_date_time(input)?;
-    Ok(date.date())
+    #[allow(dead_code)]
+    pub enum TimeHistory {
+        Before,
+        After,
+    }
+
+    #[cfg(feature = "chrono")]
+    pub fn calc_naive_date_time<S: Into<String>>(
+        input: S,
+        history: TimeHistory,
+    ) -> anyhow::Result<chrono::NaiveDateTime> {
+        let duration = parse_chrono(input)?;
+        let time = match history {
+            TimeHistory::Before => (Utc::now() - duration).naive_utc(),
+            TimeHistory::After => (Utc::now() + duration).naive_utc(),
+        };
+        Ok(time)
+    }
+
+    macro_rules! gen_naive_date_func {
+        ($data_time:ident,$data:ident,$history:expr) => {
+            #[allow(dead_code)]
+            #[cfg(feature = "chrono")]
+            pub fn $data_time<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
+                calc_naive_date_time(input, $history)
+            }
+
+            #[allow(dead_code)]
+            #[cfg(feature = "chrono")]
+            pub fn $data<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDate> {
+                let date: chrono::NaiveDateTime = calc_naive_date_time(input, $history)?;
+                Ok(date.date())
+            }
+        };
+    }
+
+    gen_naive_date_func!(
+        before_naive_date_time,
+        before_naive_date,
+        TimeHistory::Before
+    );
+
+    gen_naive_date_func!(after_naive_date_time, after_naive_date, TimeHistory::After);
 }
 
 macro_rules! des_duration {
@@ -621,15 +661,15 @@ mod tests {
     fn test_parse_naive_date_time() {
         let date = Utc::now().naive_utc().date();
         let jd = date.num_days_from_ce() + 180;
-        let date = parse_naive_date_time("180d").unwrap();
+        let date = after_naive_date_time("180d").unwrap();
         assert_eq!(date.num_days_from_ce(), jd)
     }
 
     #[test]
-    fn test_parse_naive_date() {
+    fn test_after_naive_date() {
         let date = Utc::now().naive_utc().date();
         let jd = date.num_days_from_ce() + 180;
-        let date = parse_naive_date("180d").unwrap();
+        let date = after_naive_date("180d").unwrap();
         assert_eq!(date.num_days_from_ce(), jd)
     }
 }
