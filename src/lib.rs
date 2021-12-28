@@ -431,16 +431,16 @@ mod naive_date {
     }
 
     macro_rules! gen_naive_date_func {
-        ($data_time:ident,$data:ident,$history:expr) => {
+        ($date_time:ident,$date:ident,$history:expr) => {
             #[allow(dead_code)]
             #[cfg(feature = "chrono")]
-            pub fn $data_time<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
+            pub fn $date_time<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
                 calc_naive_date_time(input, $history)
             }
 
             #[allow(dead_code)]
             #[cfg(feature = "chrono")]
-            pub fn $data<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDate> {
+            pub fn $date<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDate> {
                 let date: chrono::NaiveDateTime = calc_naive_date_time(input, $history)?;
                 Ok(date.date())
             }
