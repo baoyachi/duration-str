@@ -22,12 +22,10 @@
 //!
 //! - ns:Nanosecond.Support string value: ["ns" | "NS" | "Nanosecond" | "NanoSecond" | "NANOSECOND" | "nanosecond" | "nSEC"]. e.g. 1ns
 //!
-//! Also,`duration_str` support time duration simple evaluation(+,*). See example:
+//! Also, `duration_str` support time duration simple evaluation(+,*). See examples below.
 //!
 //! # Example
-//!
 //! ```rust
-//!
 //! use duration_str::parse;
 //! use std::time::Duration;
 //!
@@ -62,16 +60,19 @@
 //! assert_eq!(duration, Duration::new(3600, 0));
 //! let duration = parse("42µs").unwrap();
 //! assert_eq!(duration,Duration::from_micros(42));
-//!
 //! ```
 //!
 //! # deserialize to std::time::Duration
-//! `deserialize_duration` Use in struct.
-//! ```rust
+//!
+#![cfg_attr(not(feature = "serde"), doc = "This requires the `serde` feature")]
+//!
+#![cfg_attr(not(feature = "serde"), doc = "```ignore")]
+#![cfg_attr(feature = "serde", doc = "```rust")]
 //! use duration_str::deserialize_duration;
 //! use serde::*;
 //! use std::time::Duration;
 //!
+//! /// Uses `deserialize_duration`.
 //! #[derive(Debug, Deserialize)]
 //! struct Config {
 //!     #[serde(deserialize_with = "deserialize_duration")]
@@ -87,13 +88,16 @@
 //!     let config: Config = serde_json::from_str(json).unwrap();
 //!     assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
 //! }
-//!
 //! ```
 //!
+//! # deserialize to chrono::Duration
+#![cfg_attr(
+    not(all(feature = "chrono", feature = "serde")),
+    doc = "This requires both the `chrono` and `serde` features"
+)]
 //!
-//! # Also use `deserialize_duration_chrono` function with chrono:Duration
-//!
-//! ```rust
+#![cfg_attr(not(all(feature = "chrono", feature = "serde")), doc = "```ignore")]
+#![cfg_attr(all(feature = "chrono", feature = "serde"), doc = "```rust")]
 //! use chrono::Duration;
 //! use duration_str::deserialize_duration_chrono;
 //! use serde::*;
@@ -407,6 +411,7 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duratio
     Ok(duration)
 }
 
+#[cfg(feature = "chrono")]
 mod naive_date {
     use crate::parse_chrono;
     use chrono::Utc;
@@ -456,6 +461,7 @@ mod naive_date {
     gen_naive_date_func!(after_naive_date_time, after_naive_date, TimeHistory::After);
 }
 
+#[cfg(feature = "serde")]
 macro_rules! des_duration {
     ($name:ident,$duration_type:ident,$fn_name:ident,$parse:ident) => {
         struct $name;
@@ -484,9 +490,10 @@ macro_rules! des_duration {
     };
 }
 
+#[cfg(feature = "serde")]
 des_duration!(DurationStd, Duration, deserialize_duration, parse_std);
 
-#[cfg(feature = "chrono")]
+#[cfg(all(feature = "chrono", feature = "serde"))]
 des_duration!(
     DurationChrono,
     CDuration,
@@ -497,7 +504,6 @@ des_duration!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Datelike, Utc};
 
     #[test]
     fn test_time_unit() {
@@ -582,14 +588,7 @@ mod tests {
         assert!(parse("0m+3-5").is_err())
     }
 
-    #[test]
-    #[cfg(feature = "chrono")]
-    fn test_parse_chrono() {
-        use chrono::Duration;
-        let duration = parse_chrono("1m+60+24 ").unwrap();
-        assert_eq!(duration, Duration::seconds(144))
-    }
-
+    #[cfg(feature = "serde")]
     #[test]
     fn test_deserialize_duration() {
         use serde::*;
@@ -603,24 +602,6 @@ mod tests {
         assert_eq!(
             config.time_ticker,
             Duration::from_nanos(ONE_YEAR_NANOSECOND) + Duration::from_secs(30)
-        );
-    }
-
-    #[test]
-    #[cfg(feature = "chrono")]
-    fn test_deserialize_duration_chrono() {
-        use chrono::Duration;
-        use serde::*;
-        #[derive(Debug, Deserialize)]
-        struct Config {
-            #[serde(deserialize_with = "deserialize_duration_chrono")]
-            time_ticker: Duration,
-        }
-        let json = r#"{"time_ticker":"1y+30"}"#;
-        let config: Config = serde_json::from_str(json).unwrap();
-        assert_eq!(
-            config.time_ticker,
-            Duration::nanoseconds(ONE_YEAR_NANOSECOND as i64) + Duration::seconds(30)
         );
     }
 
@@ -655,6 +636,37 @@ mod tests {
 
         let duration = parse("1m * 1m").unwrap();
         assert_eq!(duration, Duration::new(3600, 0));
+    }
+}
+
+#[cfg(all(test, feature = "chrono"))]
+mod chrono_tests {
+    use super::*;
+    use chrono::{Datelike, Utc};
+
+    #[test]
+    fn test_parse_chrono() {
+        use chrono::Duration;
+        let duration = parse_chrono("1m+60+24 ").unwrap();
+        assert_eq!(duration, Duration::seconds(144))
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_deserialize_duration_chrono() {
+        use chrono::Duration;
+        use serde::*;
+        #[derive(Debug, Deserialize)]
+        struct Config {
+            #[serde(deserialize_with = "deserialize_duration_chrono")]
+            time_ticker: Duration,
+        }
+        let json = r#"{"time_ticker":"1y+30"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            config.time_ticker,
+            Duration::nanoseconds(ONE_YEAR_NANOSECOND as i64) + Duration::seconds(30)
+        );
     }
 
     #[test]

@@ -35,6 +35,8 @@ jobs:
         run: cargo build --release
       - name: Run tests
         run: cargo test
+      - name: Run tests without default features.
+        run: cargo test --no-default-features
       - name: Run examples with deserialize_duration
         run: cargo run --example deserialize_duration
       - name: Run examples with deserialize_duration_chrono
