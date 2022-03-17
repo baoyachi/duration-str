@@ -47,6 +47,18 @@
 //!     Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
 //! );
 //!
+//! let duration = parse("3m 1s 29ms 17µs").unwrap();
+//! assert_eq!(
+//!     duration,
+//!     Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+//! );
+//!
+//! let duration = parse("3m1s29ms17us").unwrap();
+//! assert_eq!(
+//!     duration,
+//!     Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+//! );
+//!
 //! let duration = parse("1m*10").unwrap(); //the default duration unit is second.
 //! assert_eq!(duration, Duration::new(600, 0));
 //!
@@ -87,6 +99,20 @@
 //!     let json = r#"{"time_ticker":"1m+30s"}"#;
 //!     let config: Config = serde_json::from_str(json).unwrap();
 //!     assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
+//!
+//!     let json = r#"{"time_ticker":"3m 1s 29ms 17µs"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(
+//!         config.time_ticker,
+//!         Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+//!     );
+//!
+//!     let json = r#"{"time_ticker":"3m1s29ms17us"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(
+//!         config.time_ticker,
+//!         Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+//!     );
 //! }
 //! ```
 //!
@@ -112,23 +138,46 @@
 //!     let json = r#"{"time_ticker":"1m+30"}"#;
 //!     let config: Config = serde_json::from_str(json).unwrap();
 //!     assert_eq!(config.time_ticker, Duration::seconds(60 + 30));
+//!
+//!     let json = r#"{"time_ticker":"1m+30s"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(config.time_ticker, Duration::seconds(60 + 30));
+//!
+//!     let json = r#"{"time_ticker":"3m 1s 29ms 17µs"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(
+//!         config.time_ticker,
+//!         Duration::minutes(3)
+//!             + Duration::seconds(1)
+//!             + Duration::milliseconds(29)
+//!             + Duration::microseconds(17)
+//!     );
+//!
+//!     let json = r#"{"time_ticker":"3m1s29ms17us"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(
+//!         config.time_ticker,
+//!         Duration::minutes(3)
+//!             + Duration::seconds(1)
+//!             + Duration::milliseconds(29)
+//!             + Duration::microseconds(17)
+//!     );
 //! }
 //! ```
-//!
 
 use anyhow::anyhow;
-use nom::character::complete::{digit1, multispace0};
-use nom::combinator::opt;
-use nom::error::{ErrorKind, ParseError};
-use nom::sequence::tuple;
-use nom::AsChar;
-use nom::{IResult, InputTakeAtPosition};
-use std::time::Duration;
-
 #[cfg(feature = "chrono")]
 use chrono::Duration as CDuration;
+use nom::{
+    character::complete::{digit1, multispace0},
+    combinator::opt,
+    error::{ErrorKind, ParseError},
+    sequence::tuple,
+    AsChar, IResult, InputTakeAtPosition,
+};
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
+use std::time::Duration;
 
 #[cfg(feature = "chrono")]
 pub use naive_date::{
@@ -318,15 +367,17 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit, TimeUnit)>> {
     let mut vec = vec![];
     let mut input = input;
     while !input.trim().is_empty() {
-        let (in_input, (_, cond, _, out, opt_unit)) =
-            tuple((multispace0, cond_unit, multispace0, digit1, opt(unit1)))(input)?;
+        let (in_input, (_, opt_cond, _, out, opt_unit)) =
+            tuple((multispace0, opt(cond_unit), multispace0, digit1, opt(unit1)))(input)?;
         input = in_input;
-        if let Some(unit) = opt_unit {
-            let (_, time_unit) = time_unit(unit)?;
-            vec.push((out, cond, time_unit));
-        } else {
-            vec.push((out, cond, TimeUnit::Second));
-        }
+        // Add by default.
+        let cond = opt_cond.unwrap_or(CondUnit::Plus);
+        // Parse unit, default is seconds.
+        let time_unit = opt_unit.map_or_else(
+            || Ok(TimeUnit::Second),
+            |unit| time_unit(unit).map(|(_, time_unit)| time_unit),
+        )?;
+        vec.push((out, cond, time_unit));
     }
     Ok(("", vec))
 }
@@ -334,10 +385,10 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit, TimeUnit)>> {
 /// parse string to `std::time::Duration`
 pub fn parse(input: &str) -> anyhow::Result<Duration> {
     let (in_input, ((time_str, time_unit), cond_opt)) =
-        tuple((parse_time, opt(cond_time)))(input).map_err(|e| anyhow!("parse error:{}", e))?;
+        tuple((parse_time, opt(cond_time)))(input).map_err(|e| anyhow!("parse error: {}", e))?;
     if !in_input.is_empty() && cond_opt.is_none() {
         return Err(anyhow!(
-            "not support duration string:[{}],cause by:[{}],",
+            "unsupported duration string: [{}], caused by: [{}],",
             input,
             in_input
         ));
@@ -355,26 +406,37 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
 /// # Example
 ///
 /// ```rust
-///
 /// use duration_str::parse;
 /// use std::time::Duration;
 ///
+/// // supports units
 /// let duration = parse("1d").unwrap();
 /// assert_eq!(duration,Duration::new(24*60*60,0));
 ///
+/// // supports addition
 /// let duration = parse("3m+31").unwrap();
 /// assert_eq!(duration,Duration::new(211,0));
 ///
+/// // spaces are optional
 /// let duration = parse("3m + 31").unwrap();
 /// assert_eq!(duration,Duration::new(211,0));
 ///
+/// // plus sign is optional
+/// let duration = parse("3m  31").unwrap();
+/// assert_eq!(duration,Duration::new(211,0));
+///
+/// // both plus and spaces are optional
+/// let duration = parse("3m31").unwrap();
+/// assert_eq!(duration,Duration::new(211,0));
+///
+/// // supports multiplication
 /// let duration = parse("1m*10").unwrap();
 /// assert_eq!(duration,Duration::new(600,0));
 ///
+/// // spaces are optional
 /// let duration = parse("1m * 10").unwrap();
 /// assert_eq!(duration,Duration::new(600,0));
 /// ```
-///
 pub fn parse_std<S: Into<String>>(input: S) -> anyhow::Result<Duration> {
     let input = input.into();
     parse(input.as_str())
@@ -385,27 +447,37 @@ pub fn parse_std<S: Into<String>>(input: S) -> anyhow::Result<Duration> {
 /// # Example
 ///
 /// ```rust
-///
 /// use duration_str::parse_chrono;
 /// use chrono::Duration;
 ///
+/// // supports units
 /// let duration = parse_chrono("1d").unwrap();
 /// assert_eq!(duration,Duration::seconds(24*60*60));
 ///
+/// // supports addition
 /// let duration = parse_chrono("3m+31").unwrap();
 /// assert_eq!(duration,Duration::seconds(211));
 ///
+/// // spaces are optional
 /// let duration = parse_chrono("3m + 31").unwrap();
 /// assert_eq!(duration,Duration::seconds(211));
 ///
+/// // plus sign is optional
+/// let duration = parse_chrono("3m  31").unwrap();
+/// assert_eq!(duration,Duration::seconds(211));
+///
+/// // both plus and spaces are optional
+/// let duration = parse_chrono("3m31").unwrap();
+/// assert_eq!(duration,Duration::seconds(211));
+///
+/// // supports multiplication
 /// let duration = parse_chrono("1m*10").unwrap();
 /// assert_eq!(duration,Duration::seconds(600));
 ///
+/// // spaces are optional
 /// let duration = parse_chrono("1m * 10").unwrap();
 /// assert_eq!(duration,Duration::seconds(600));
 /// ```
-///
-///
 #[cfg(feature = "chrono")]
 pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duration> {
     let std_duration = parse_std(input)?;
