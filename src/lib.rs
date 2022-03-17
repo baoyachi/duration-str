@@ -18,7 +18,7 @@
 //!
 //! - ms:Millisecond.Support string value: ["ms" | "MS" | "Millisecond" | "MilliSecond" | "MILLISECOND" | "millisecond" | "mSEC" ]. e.g. 1ms
 //!
-//! - µs:Microsecond.Support string value: ["µs" | "µS" | "µsecond" | "Microsecond" | "MicroSecond" | "MICROSECOND" | "microsecond" | "µSEC"]. e.g. 1µs
+//! - µs:Microsecond.Support string value: ["µs" | "µS" | "µsecond" | "us" | "uS" | "usecond" | "Microsecond" | "MicroSecond" | "MICROSECOND" | "microsecond" | "µSEC"]. e.g. 1µs
 //!
 //! - ns:Nanosecond.Support string value: ["ns" | "NS" | "Nanosecond" | "NanoSecond" | "NANOSECOND" | "nanosecond" | "nSEC"]. e.g. 1ns
 //!
@@ -286,10 +286,12 @@ fn time_unit(input: &str) -> IResult<&str, TimeUnit> {
         "m" | "min" | "minute" => Ok((input, TimeUnit::Minute)),
         "s" | "sec" | "second" => Ok((input, TimeUnit::Second)),
         "ms" | "msec" | "millisecond" => Ok((input, TimeUnit::MilliSecond)),
-        "µs" | "µsec" | "µsecond" | "microsecond" => Ok((input, TimeUnit::MicroSecond)),
+        "µs" | "µsec" | "µsecond" | "us" | "usec" | "usecond" | "microsecond" => {
+            Ok((input, TimeUnit::MicroSecond))
+        }
         "ns" | "nsec" | "nanosecond" => Ok((input, TimeUnit::NanoSecond)),
         _ => Err(nom::Err::Error(nom::error::Error::new(
-            "expect one of [y,mon,w,d,h,m,s,ms,µs,ns]",
+            "expect one of [y,mon,w,d,h,m,s,ms,µs,us,ns] or their longer forms",
             ErrorKind::Alpha,
         ))),
     }
