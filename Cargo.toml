@@ -10,16 +10,28 @@ categories = ["parsing", "date-and-time"]
 repository = "https://github.com/baoyachi/duration-str"
 license = "MIT AND Apache-2.0"
 
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+default = ["chrono", "serde"]
 
 [dependencies]
 nom = "6.1.2"
 anyhow = "1.0.38"
 chrono = { version = "0.4.19", optional = true }
 serde = { version = "1.0.124", features = ["derive"], optional = true }
-serde_json = { version = "1.0.64", optional = true }
 rust_decimal = { version = "1.15", default-features = false }
 
-[features]
-default = ["chrono", "serde", "serde_json"]
+[dev-dependencies]
+serde_json = { version = "1.0.64" }
+
+# docs.rs-specific configuration
+[package.metadata.docs.rs]
+# document all features
+all-features = true
+
+[[example]]
+name = "deserialize_duration"
+required-features = ["serde"]
+
+[[example]]
+name = "deserialize_duration_chrono"
+required-features = ["chrono", "serde"]
