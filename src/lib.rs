@@ -169,8 +169,6 @@ use anyhow::anyhow;
 #[cfg(feature = "chrono")]
 use chrono::Duration as CDuration;
 
-#[cfg(feature = "time")]
-use time::Duration as TDuration;
 use nom::{
     character::complete::{digit1, multispace0},
     combinator::opt,
@@ -181,6 +179,8 @@ use nom::{
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::time::Duration;
+#[cfg(feature = "time")]
+use time::Duration as TDuration;
 
 #[cfg(feature = "chrono")]
 pub use naive_date::{
@@ -388,7 +388,8 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit, TimeUnit)>> {
 /// parse string to `std::time::Duration`
 pub fn parse(input: &str) -> anyhow::Result<Duration> {
     let (in_input, ((time_str, time_unit), cond_opt)) =
-        tuple((parse_expr_time, opt(cond_time)))(input).map_err(|e| anyhow!("parse error: {}", e))?;
+        tuple((parse_expr_time, opt(cond_time)))(input)
+            .map_err(|e| anyhow!("parse error: {}", e))?;
     if !in_input.is_empty() && cond_opt.is_none() {
         return Err(anyhow!(
             "unsupported duration string: [{}], caused by: [{}],",
@@ -695,7 +696,6 @@ des_option_duration!(
     parse_time
 );
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -975,12 +975,11 @@ mod chrono_tests {
     }
 }
 
-
 #[cfg(all(test, feature = "time"))]
 mod time_tests {
     use super::*;
-    use time::Duration;
     use serde::*;
+    use time::Duration;
 
     #[test]
     fn test_parse_time() {

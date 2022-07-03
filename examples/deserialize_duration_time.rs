@@ -1,6 +1,6 @@
-use time::Duration;
 use duration_str::deserialize_duration_time;
 use serde::*;
+use time::Duration;
 
 #[derive(Debug, Deserialize)]
 struct Config {
