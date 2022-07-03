@@ -96,7 +96,43 @@ fn main() {
 }
 ```
 
+* option filed deserialize
 
+```rust
+use duration_str::deserialize_option_duration;
+use serde::*;
+use std::time::Duration;
+
+#[derive(Debug, Deserialize, PartialEq)]
+struct Config {
+    #[serde(default, deserialize_with = "deserialize_option_duration")]
+    time_ticker: Option<Duration>,
+    name: String,
+}
+
+fn main() {
+    let json = r#"{"time_ticker":null,"name":"foo"}"#;
+    let config: Config = serde_json::from_str(json).unwrap();
+    
+    assert_eq!(
+        config,
+        Config {
+            time_ticker: None,
+            name: "foo".into()
+        }
+    );
+    
+    let json = r#"{"name":"foo"}"#;
+    let config: Config = serde_json::from_str(json).unwrap();
+    assert_eq!(
+        config,
+        Config {
+            time_ticker: None,
+            name: "foo".into()
+        }
+    );
+}
+```
 Also you can use `deserialize_duration_chrono` function
 
 ```rust
