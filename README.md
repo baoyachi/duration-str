@@ -4,9 +4,15 @@
 [![Crates.io](https://img.shields.io/crates/v/duration-str.svg)](https://crates.io/crates/duration-str)
 [![Docs.rs](https://docs.rs/duration-str/badge.svg)](https://docs.rs/duration-str)
 
+## Support
+The [duration-str](https://crates.io/crates/duration-str) support multiple Duration:
+* https://doc.rust-lang.org/stable/std/time/struct.Duration.html
+* https://docs.rs/chrono/latest/chrono/struct.Duration.html
+* https://docs.rs/time/latest/time/struct.Duration.html#
+
 
 ## Notice ⚠️
-The default duration unit is second.Also use below **duration unit** 
+The default duration unit is second.Also use below **duration unit**
 
 ## Duration Unit List
 
@@ -133,7 +139,9 @@ fn main() {
     );
 }
 ```
-Also you can use `deserialize_duration_chrono` function
+Also you can use `deserialize_duration_chrono` or `deserialize_duration_time` function
+
+### E.g:
 
 ```rust
 use chrono::Duration;

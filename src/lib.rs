@@ -168,6 +168,9 @@
 use anyhow::anyhow;
 #[cfg(feature = "chrono")]
 use chrono::Duration as CDuration;
+
+#[cfg(feature = "time")]
+use time::Duration as TDuration;
 use nom::{
     character::complete::{digit1, multispace0},
     combinator::opt,
@@ -485,6 +488,50 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duratio
     Ok(duration)
 }
 
+/// convert Into<String> to `time::Duration`
+///
+/// # Example
+///
+/// ```rust
+/// use duration_str::parse_time;
+/// use time::Duration;
+///
+/// // supports units
+/// let duration = parse_time("1d").unwrap();
+/// assert_eq!(duration,Duration::seconds(24*60*60));
+///
+/// // supports addition
+/// let duration = parse_time("3m+31").unwrap();
+/// assert_eq!(duration,Duration::seconds(211));
+///
+/// // spaces are optional
+/// let duration = parse_time("3m + 31").unwrap();
+/// assert_eq!(duration,Duration::seconds(211));
+///
+/// // plus sign is optional
+/// let duration = parse_time("3m  31").unwrap();
+/// assert_eq!(duration,Duration::seconds(211));
+///
+/// // both plus and spaces are optional
+/// let duration = parse_time("3m31").unwrap();
+/// assert_eq!(duration,Duration::seconds(211));
+///
+/// // supports multiplication
+/// let duration = parse_time("1m*10").unwrap();
+/// assert_eq!(duration,Duration::seconds(600));
+///
+/// // spaces are optional
+/// let duration = parse_time("1m * 10").unwrap();
+/// assert_eq!(duration,Duration::seconds(600));
+/// ```
+#[cfg(feature = "time")]
+pub fn parse_time<S: Into<String>>(input: S) -> anyhow::Result<time::Duration> {
+    let std_duration = parse_std(input)?;
+    use std::convert::TryFrom;
+    let duration = time::Duration::try_from(std_duration)?;
+    Ok(duration)
+}
+
 #[cfg(feature = "chrono")]
 mod naive_date {
     use crate::parse_chrono;
@@ -631,6 +678,23 @@ des_option_duration!(
     deserialize_option_duration_chrono,
     parse_chrono
 );
+
+#[cfg(all(feature = "time", feature = "serde"))]
+des_duration!(
+    DurationTime,
+    TDuration,
+    deserialize_duration_time,
+    parse_time
+);
+
+#[cfg(all(feature = "time", feature = "serde"))]
+des_option_duration!(
+    OptionDurationTime,
+    TDuration,
+    deserialize_option_duration_time,
+    parse_time
+);
+
 
 #[cfg(test)]
 mod tests {
@@ -908,5 +972,51 @@ mod chrono_tests {
         let jd = date.num_days_from_ce() - 180;
         let date = before_naive_date("180d").unwrap();
         assert_eq!(date.num_days_from_ce(), jd)
+    }
+}
+
+
+#[cfg(all(test, feature = "time"))]
+mod time_tests {
+    use super::*;
+    use time::Duration;
+    use serde::*;
+
+    #[test]
+    fn test_parse_time() {
+        let duration = parse_time("1m+60+24 ").unwrap();
+        assert_eq!(duration, Duration::seconds(144))
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_deserialize_duration_time() {
+        #[derive(Debug, Deserialize)]
+        struct Config {
+            #[serde(deserialize_with = "deserialize_duration_time")]
+            time_ticker: Duration,
+        }
+        let json = r#"{"time_ticker":"1y+30"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            config.time_ticker,
+            Duration::nanoseconds(ONE_YEAR_NANOSECOND as i64) + Duration::seconds(30)
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_deserialize_option_duration_time() {
+        #[derive(Debug, Deserialize)]
+        struct Config {
+            #[serde(deserialize_with = "deserialize_option_duration_time")]
+            time_ticker: Option<Duration>,
+        }
+        let json = r#"{"time_ticker":"1y+30"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            config.time_ticker,
+            Some(Duration::nanoseconds(ONE_YEAR_NANOSECOND as i64) + Duration::seconds(30))
+        );
     }
 }
