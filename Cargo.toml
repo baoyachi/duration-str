@@ -37,3 +37,7 @@ required-features = ["serde"]
 [[example]]
 name = "deserialize_duration_chrono"
 required-features = ["chrono", "serde"]
+
+[[example]]
+name = "deserialize_duration_time"
+required-features = ["time", "serde"]
