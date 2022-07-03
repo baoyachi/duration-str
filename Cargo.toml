@@ -11,7 +11,7 @@ repository = "https://github.com/baoyachi/duration-str"
 license = "MIT AND Apache-2.0"
 
 [features]
-default = ["chrono", "serde","time"]
+default = ["chrono", "serde", "time"]
 
 [dependencies]
 nom = "6.1.2"
