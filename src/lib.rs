@@ -359,7 +359,7 @@ fn cond_unit(input: &str) -> IResult<&str, CondUnit> {
     }
 }
 
-fn parse_time(input: &str) -> IResult<&str, (&str, TimeUnit)> {
+fn parse_expr_time(input: &str) -> IResult<&str, (&str, TimeUnit)> {
     tuple((digit1, time_unit))(input)
 }
 
@@ -385,7 +385,7 @@ fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit, TimeUnit)>> {
 /// parse string to `std::time::Duration`
 pub fn parse(input: &str) -> anyhow::Result<Duration> {
     let (in_input, ((time_str, time_unit), cond_opt)) =
-        tuple((parse_time, opt(cond_time)))(input).map_err(|e| anyhow!("parse error: {}", e))?;
+        tuple((parse_expr_time, opt(cond_time)))(input).map_err(|e| anyhow!("parse error: {}", e))?;
     if !in_input.is_empty() && cond_opt.is_none() {
         return Err(anyhow!(
             "unsupported duration string: [{}], caused by: [{}],",
@@ -644,8 +644,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_time() {
-        let (input, (out, format)) = parse_time("123m").unwrap();
+    fn test_parse_expr_time() {
+        let (input, (out, format)) = parse_expr_time("123m").unwrap();
         assert_eq!(input, "");
         assert_eq!(out, "123");
         assert_eq!(format, TimeUnit::Minute);
