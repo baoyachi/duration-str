@@ -11,12 +11,14 @@ repository = "https://github.com/baoyachi/duration-str"
 license = "MIT AND Apache-2.0"
 
 [features]
-default = ["chrono", "serde"]
+default = ["chrono", "serde","time"]
 
 [dependencies]
 nom = "6.1.2"
 anyhow = "1.0.38"
 chrono = { version = "0.4.19", optional = true }
+time = { version = "0.3.11", optional = true }
+
 serde = { version = "1.0.124", features = ["derive"], optional = true }
 rust_decimal = { version = "1.15", default-features = false }
 
