@@ -14,16 +14,16 @@ license = "MIT AND Apache-2.0"
 default = ["chrono", "serde", "time"]
 
 [dependencies]
-nom = "6.1.2"
-anyhow = "1.0.38"
-chrono = { version = "0.4.19", optional = true }
-time = { version = "0.3.11", optional = true }
+nom = "7.1.1"
+anyhow = "1.0.66"
+chrono = { version = "0.4.23", optional = true }
+time = { version = "0.3.17", optional = true }
 
-serde = { version = "1.0.124", features = ["derive"], optional = true }
-rust_decimal = { version = "1.15", default-features = false }
+serde = { version = "1.0.147", features = ["derive"], optional = true }
+rust_decimal = { version = "1.26.1", default-features = false }
 
 [dev-dependencies]
-serde_json = { version = "1.0.64" }
+serde_json = { version = "1.0.87" }
 
 # docs.rs-specific configuration
 [package.metadata.docs.rs]
