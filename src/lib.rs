@@ -166,7 +166,7 @@
 //! ```
 
 use anyhow::anyhow;
-#[cfg(feature = "chrono")]
+#[cfg(all(feature = "chrono", feature = "serde"))]
 use chrono::Duration as CDuration;
 
 use nom::{
@@ -179,7 +179,7 @@ use nom::{
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::time::Duration;
-#[cfg(feature = "time")]
+#[cfg(all(feature = "time", feature = "serde"))]
 use time::Duration as TDuration;
 
 #[cfg(feature = "chrono")]
