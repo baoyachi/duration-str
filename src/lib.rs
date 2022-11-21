@@ -165,20 +165,17 @@
 //! }
 //! ```
 
-use anyhow::anyhow;
 #[cfg(all(feature = "chrono", feature = "serde"))]
 use chrono::Duration as CDuration;
 
-use nom::{
-    character::complete::{digit1, multispace0},
-    combinator::opt,
-    error::{ErrorKind, ParseError},
-    sequence::tuple,
-    AsChar, IResult, InputTakeAtPosition,
-};
+use dls_parser::*;
+use nom::combinator::opt;
+use nom::sequence::tuple;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
+use std::convert::TryFrom;
 use std::time::Duration;
+use thiserror::Error;
 #[cfg(all(feature = "time", feature = "serde"))]
 use time::Duration as TDuration;
 
@@ -186,6 +183,18 @@ use time::Duration as TDuration;
 pub use naive_date::{
     after_naive_date, after_naive_date_time, before_naive_date, before_naive_date_time,
 };
+
+pub type DResult<T> = Result<T, DError>;
+
+#[derive(Error, Debug)]
+pub enum DError {
+    #[error("the dls express write error: `{0}`")]
+    DSLError(String),
+    #[error("parser error: `{0}`")]
+    ParseError(String),
+    #[error("`{0}`")]
+    NormalError(String),
+}
 
 #[derive(Debug, Eq, PartialEq)]
 enum TimeUnit {
@@ -217,8 +226,10 @@ fn one_second_decimal() -> Decimal {
 }
 
 impl TimeUnit {
-    fn duration(&self, time_str: &str) -> anyhow::Result<u64> {
-        let time = time_str.parse::<u64>()?;
+    fn duration(&self, time_str: &str) -> DResult<u64> {
+        let time = time_str
+            .parse::<u64>()
+            .map_err(|err| DError::ParseError(err.to_string()))?;
         let unit = match self {
             TimeUnit::Year => ONE_YEAR_NANOSECOND,
             TimeUnit::Month => ONE_MONTH_NANOSECOND,
@@ -256,7 +267,7 @@ impl CondUnit {
         }
     }
 
-    fn calc(&self, x: u64, y: u64) -> anyhow::Result<Duration> {
+    fn calc(&self, x: u64, y: u64) -> DResult<Duration> {
         let nano_second = match self {
             CondUnit::Plus => x + y,
             CondUnit::Star => {
@@ -264,8 +275,9 @@ impl CondUnit {
                 let y: Decimal = y.into();
                 let ret =
                     (x / one_second_decimal()) * (y / one_second_decimal()) * one_second_decimal();
-                ret.to_u64()
-                    .ok_or_else(|| anyhow!("type of Decimal:{} convert to u64 error", ret))?
+                ret.to_u64().ok_or_else(|| {
+                    DError::ParseError(format!("type of Decimal:{} convert to u64 error", ret))
+                })?
             }
         };
         Ok(Duration::from_nanos(nano_second))
@@ -273,22 +285,22 @@ impl CondUnit {
 }
 
 trait Calc<T> {
-    fn calc(&self) -> anyhow::Result<T>;
+    fn calc(&self) -> DResult<T>;
 }
 
 impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
-    fn calc(&self) -> anyhow::Result<(CondUnit, u64)> {
+    fn calc(&self) -> DResult<(CondUnit, u64)> {
         let (mut init_cond, mut init_duration) = CondUnit::init();
         for (index, (val, cond, time_unit)) in self.iter().enumerate() {
             if index == 0 {
                 init_cond = cond.clone();
                 init_duration = init_cond.change_duration();
             } else if &init_cond != cond {
-                return Err(anyhow!(
+                return Err(DError::NormalError(format!(
                     "not support '{}' with '{}' calculate",
                     init_cond.to_string(),
                     cond.to_string()
-                ));
+                )));
             }
             match init_cond {
                 CondUnit::Plus => init_duration += time_unit.duration(val)?,
@@ -297,9 +309,9 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
                     let i = time / one_second_decimal();
                     let mut init: Decimal = init_duration.into();
                     init *= i;
-                    init_duration = init
-                        .to_u64()
-                        .ok_or_else(|| anyhow!("type of Decimal:{} convert to u64 error", init))?;
+                    init_duration = init.to_u64().ok_or_else(|| {
+                        DError::ParseError(format!("type of Decimal:{} convert to u64 error", init))
+                    })?;
                 }
             }
         }
@@ -316,86 +328,96 @@ impl ToString for CondUnit {
     }
 }
 
-fn unit1<T, E: ParseError<T>>(input: T) -> IResult<T, T, E>
-where
-    T: InputTakeAtPosition,
-    <T as InputTakeAtPosition>::Item: AsChar + Copy,
-{
-    input.split_at_position1_complete(
-        |item| !(item.is_alpha() || item.as_char() == 'µ'),
-        ErrorKind::Alpha,
-    )
-}
+mod dls_parser {
+    use crate::{CondUnit, TimeUnit, PLUS, STAR};
+    use nom::{
+        character::complete::{digit1, multispace0},
+        combinator::opt,
+        error::{ErrorKind, ParseError},
+        sequence::tuple,
+        AsChar, IResult, InputTakeAtPosition,
+    };
 
-fn time_unit(input: &str) -> IResult<&str, TimeUnit> {
-    let (input, out) = unit1(input)?;
-    match out.to_lowercase().as_str() {
-        "y" | "year" => Ok((input, TimeUnit::Year)),
-        "mon" | "month" => Ok((input, TimeUnit::Month)),
-        "w" | "week" => Ok((input, TimeUnit::Week)),
-        "d" | "day" => Ok((input, TimeUnit::Day)),
-        "h" | "hour" => Ok((input, TimeUnit::Hour)),
-        "m" | "min" | "minute" => Ok((input, TimeUnit::Minute)),
-        "s" | "sec" | "second" => Ok((input, TimeUnit::Second)),
-        "ms" | "msec" | "millisecond" => Ok((input, TimeUnit::MilliSecond)),
-        "µs" | "µsec" | "µsecond" | "us" | "usec" | "usecond" | "microsecond" => {
-            Ok((input, TimeUnit::MicroSecond))
-        }
-        "ns" | "nsec" | "nanosecond" => Ok((input, TimeUnit::NanoSecond)),
-        _ => Err(nom::Err::Error(nom::error::Error::new(
-            "expect one of [y,mon,w,d,h,m,s,ms,µs,us,ns] or their longer forms",
+    pub(crate) fn unit1<T, E: ParseError<T>>(input: T) -> IResult<T, T, E>
+    where
+        T: InputTakeAtPosition,
+        <T as InputTakeAtPosition>::Item: AsChar + Copy,
+    {
+        input.split_at_position1_complete(
+            |item| !(item.is_alpha() || item.as_char() == 'µ'),
             ErrorKind::Alpha,
-        ))),
+        )
     }
-}
 
-fn cond_unit(input: &str) -> IResult<&str, CondUnit> {
-    let (input, out) =
-        input.split_at_position1_complete(|item| !matches!(item, '+' | '*'), ErrorKind::Char)?;
-    match out {
-        PLUS => Ok((input, CondUnit::Plus)),
-        STAR => Ok((input, CondUnit::Star)),
-        _ => Err(nom::Err::Error(nom::error::Error::new(
-            "expect one of [+,*]",
-            ErrorKind::Char,
-        ))),
+    pub(crate) fn time_unit(input: &str) -> IResult<&str, TimeUnit> {
+        let (input, out) = unit1(input)?;
+        match out.to_lowercase().as_str() {
+            "y" | "year" => Ok((input, TimeUnit::Year)),
+            "mon" | "month" => Ok((input, TimeUnit::Month)),
+            "w" | "week" => Ok((input, TimeUnit::Week)),
+            "d" | "day" => Ok((input, TimeUnit::Day)),
+            "h" | "hour" => Ok((input, TimeUnit::Hour)),
+            "m" | "min" | "minute" => Ok((input, TimeUnit::Minute)),
+            "s" | "sec" | "second" => Ok((input, TimeUnit::Second)),
+            "ms" | "msec" | "millisecond" => Ok((input, TimeUnit::MilliSecond)),
+            "µs" | "µsec" | "µsecond" | "us" | "usec" | "usecond" | "microsecond" => {
+                Ok((input, TimeUnit::MicroSecond))
+            }
+            "ns" | "nsec" | "nanosecond" => Ok((input, TimeUnit::NanoSecond)),
+            _ => Err(nom::Err::Error(nom::error::Error::new(
+                "expect one of [y,mon,w,d,h,m,s,ms,µs,us,ns] or their longer forms",
+                ErrorKind::Alpha,
+            ))),
+        }
     }
-}
 
-fn parse_expr_time(input: &str) -> IResult<&str, (&str, TimeUnit)> {
-    tuple((digit1, time_unit))(input)
-}
-
-fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit, TimeUnit)>> {
-    let mut vec = vec![];
-    let mut input = input;
-    while !input.trim().is_empty() {
-        let (in_input, (_, opt_cond, _, out, opt_unit)) =
-            tuple((multispace0, opt(cond_unit), multispace0, digit1, opt(unit1)))(input)?;
-        input = in_input;
-        // Add by default.
-        let cond = opt_cond.unwrap_or(CondUnit::Plus);
-        // Parse unit, default is seconds.
-        let time_unit = opt_unit.map_or_else(
-            || Ok(TimeUnit::Second),
-            |unit| time_unit(unit).map(|(_, time_unit)| time_unit),
-        )?;
-        vec.push((out, cond, time_unit));
+    pub(crate) fn cond_unit(input: &str) -> IResult<&str, CondUnit> {
+        let (input, out) = input
+            .split_at_position1_complete(|item| !matches!(item, '+' | '*'), ErrorKind::Char)?;
+        match out {
+            PLUS => Ok((input, CondUnit::Plus)),
+            STAR => Ok((input, CondUnit::Star)),
+            _ => Err(nom::Err::Error(nom::error::Error::new(
+                "expect one of [+,*]",
+                ErrorKind::Char,
+            ))),
+        }
     }
-    Ok(("", vec))
+
+    pub(crate) fn parse_expr_time(input: &str) -> IResult<&str, (&str, TimeUnit)> {
+        tuple((digit1, time_unit))(input)
+    }
+
+    pub(crate) fn cond_time(input: &str) -> IResult<&str, Vec<(&str, CondUnit, TimeUnit)>> {
+        let mut vec = vec![];
+        let mut input = input;
+        while !input.trim().is_empty() {
+            let (in_input, (_, opt_cond, _, out, opt_unit)) =
+                tuple((multispace0, opt(cond_unit), multispace0, digit1, opt(unit1)))(input)?;
+            input = in_input;
+            // Add by default.
+            let cond = opt_cond.unwrap_or(CondUnit::Plus);
+            // Parse unit, default is seconds.
+            let time_unit = opt_unit.map_or_else(
+                || Ok(TimeUnit::Second),
+                |unit| time_unit(unit).map(|(_, time_unit)| time_unit),
+            )?;
+            vec.push((out, cond, time_unit));
+        }
+        Ok(("", vec))
+    }
 }
 
 /// parse string to `std::time::Duration`
-pub fn parse(input: &str) -> anyhow::Result<Duration> {
+pub fn parse(input: &str) -> DResult<Duration> {
     let (in_input, ((time_str, time_unit), cond_opt)) =
         tuple((parse_expr_time, opt(cond_time)))(input)
-            .map_err(|e| anyhow!("parse error: {}", e))?;
+            .map_err(|e| DError::DSLError(format!("{}", e)))?;
     if !in_input.is_empty() && cond_opt.is_none() {
-        return Err(anyhow!(
+        return Err(DError::DSLError(format!(
             "unsupported duration string: [{}], caused by: [{}],",
-            input,
-            in_input
-        ));
+            input, in_input
+        )));
     }
     let (init_cond, init_duration) = cond_opt
         .map(|val| val.calc())
@@ -441,7 +463,7 @@ pub fn parse(input: &str) -> anyhow::Result<Duration> {
 /// let duration = parse("1m * 10").unwrap();
 /// assert_eq!(duration,Duration::new(600,0));
 /// ```
-pub fn parse_std<S: Into<String>>(input: S) -> anyhow::Result<Duration> {
+pub fn parse_std<S: Into<String>>(input: S) -> DResult<Duration> {
     let input = input.into();
     parse(input.as_str())
 }
@@ -483,9 +505,10 @@ pub fn parse_std<S: Into<String>>(input: S) -> anyhow::Result<Duration> {
 /// assert_eq!(duration,Duration::seconds(600));
 /// ```
 #[cfg(feature = "chrono")]
-pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duration> {
+pub fn parse_chrono<S: Into<String>>(input: S) -> DResult<chrono::Duration> {
     let std_duration = parse_std(input)?;
-    let duration = chrono::Duration::from_std(std_duration)?;
+    let duration = chrono::Duration::from_std(std_duration)
+        .map_err(|e| DError::ParseError(format!("{}", e)))?;
     Ok(duration)
 }
 
@@ -526,16 +549,16 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> anyhow::Result<chrono::Duratio
 /// assert_eq!(duration,Duration::seconds(600));
 /// ```
 #[cfg(feature = "time")]
-pub fn parse_time<S: Into<String>>(input: S) -> anyhow::Result<time::Duration> {
+pub fn parse_time<S: Into<String>>(input: S) -> DResult<time::Duration> {
     let std_duration = parse_std(input)?;
-    use std::convert::TryFrom;
-    let duration = time::Duration::try_from(std_duration)?;
+    let duration =
+        time::Duration::try_from(std_duration).map_err(|e| DError::ParseError(format!("{}", e)))?;
     Ok(duration)
 }
 
 #[cfg(feature = "chrono")]
 mod naive_date {
-    use crate::parse_chrono;
+    use crate::{parse_chrono, DResult};
     use chrono::Utc;
 
     #[allow(dead_code)]
@@ -548,7 +571,7 @@ mod naive_date {
     pub fn calc_naive_date_time<S: Into<String>>(
         input: S,
         history: TimeHistory,
-    ) -> anyhow::Result<chrono::NaiveDateTime> {
+    ) -> DResult<chrono::NaiveDateTime> {
         let duration = parse_chrono(input)?;
         let time = match history {
             TimeHistory::Before => (Utc::now() - duration).naive_utc(),
@@ -561,13 +584,13 @@ mod naive_date {
         ($date_time:ident,$date:ident,$history:expr) => {
             #[allow(dead_code)]
             #[cfg(feature = "chrono")]
-            pub fn $date_time<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDateTime> {
+            pub fn $date_time<S: Into<String>>(input: S) -> DResult<chrono::NaiveDateTime> {
                 calc_naive_date_time(input, $history)
             }
 
             #[allow(dead_code)]
             #[cfg(feature = "chrono")]
-            pub fn $date<S: Into<String>>(input: S) -> anyhow::Result<chrono::NaiveDate> {
+            pub fn $date<S: Into<String>>(input: S) -> DResult<chrono::NaiveDate> {
                 let date: chrono::NaiveDateTime = calc_naive_date_time(input, $history)?;
                 Ok(date.date())
             }
@@ -927,7 +950,7 @@ mod chrono_tests {
             config,
             Config {
                 time_ticker: None,
-                name: "foo".into()
+                name: "foo".into(),
             }
         );
 
@@ -937,7 +960,7 @@ mod chrono_tests {
             config,
             Config {
                 time_ticker: None,
-                name: "foo".into()
+                name: "foo".into(),
             }
         );
     }
