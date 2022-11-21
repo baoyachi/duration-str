@@ -188,7 +188,7 @@ pub type DResult<T> = Result<T, DError>;
 
 #[derive(Error, Debug)]
 pub enum DError {
-    #[error("the dls express write error: `{0}`")]
+    #[error("dls express error: `{0}`")]
     DSLError(String),
     #[error("parser error: `{0}`")]
     ParseError(String),
