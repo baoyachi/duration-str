@@ -1,6 +1,6 @@
 [package]
 name = "duration-str"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["baoyachi <liaoymxsdl@gmail.com>"]
 edition = "2021"
 description = "duration string parser"
@@ -20,7 +20,7 @@ chrono = { version = "0.4.23", optional = true }
 time = { version = "0.3.17", optional = true }
 
 serde = { version = "1.0.147", features = ["derive"], optional = true }
-rust_decimal = { version = "1.26.1", default-features = false }
+rust_decimal = { version = "1.29.1", default-features = false }
 
 [dev-dependencies]
 serde_json = { version = "1.0.87" }
