@@ -10,7 +10,7 @@
 //!
 //! - d:Day.Support string value: ["d" | "D" | "Day" | "DAY" | "day"]. e.g. 1d
 //!
-//! - h:Hour.Support string value: ["h" | "H" | "Hour" | "HOUR" | "hour"]. e.g. 1h
+//! - h:Hour.Support string value: ["h" | "H" | "hr" | "Hour" | "HOUR" | "hour"]. e.g. 1h
 //!
 //! - m:Minute.Support string value: ["m" | "M" | "Minute" | "MINUTE" | "minute" | "min" | "MIN"]. e.g. 1m
 //!
@@ -804,6 +804,12 @@ mod tests {
     #[test]
     fn test_duration_parse7() {
         assert!(parse("0m+3-5").is_err())
+    }
+
+    #[test]
+    fn test_duration_parse8() {
+        let duration = parse("1hr").unwrap();
+        assert_eq!(duration, Duration::new(3600, 0))
     }
 
     #[cfg(feature = "serde")]
