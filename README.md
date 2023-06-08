@@ -18,13 +18,13 @@ The default duration unit is second.Also use below **duration unit**
 
 Parse string to `Duration` . The String duration unit support for one of:`["y","mon","w","d","h","m","s", "ms", "µs", "ns"]`
 
-| unit | Description | unit list option(one of)                                                                         | example |
-| ---- | ----------- | ------------------------------------------------------------------------------------------------ | ------- |
-| y    | Year        | ["y" , "year" , "Y" , "YEAR" , "Year"]                                                           | 1y      |
+| unit | Description | unit list option(one of)                                                                           | example |
+| ---- | ----------- |----------------------------------------------------------------------------------------------------| ------- |
+| y    | Year        | ["y" , "year" , "Y" , "YEAR" , "Year"]                                                             | 1y      |
 | mon  | Month       | ["mon" , "MON" , "Month" , "month" , "MONTH"]                                                      | 1mon    |
 | w    | Week        | ["w" , "W" , "Week" ,"WEEK" , "week"]                                                              | 1w      |
 | d    | Day         | ["d" , "D" , "Day" , "DAY" , "day"]                                                                | 1d      |
-| h    | Hour        | ["h" , "H" , "Hour" , "HOUR" , "hour"]                                                             | 1h      |
+| h    | Hour        | ["h" , "hr" , "H" , "Hour" , "HOUR" , "hour"]                                                      | 1h      |
 | m    | Minute      | ["m" , "M" , "Minute" , "MINUTE" , "minute" , "min" , "MIN"]                                       | 1m      |
 | s    | Second      | ["s" , "S" , "Second" , "SECOND" , "second" , "sec" , "SEC"]                                       | 1s      |
 | ms   | Millisecond | ["ms" , "MS" , "Millisecond" , "MilliSecond" , "MILLISECOND" , "millisecond" , "mSEC"]             | 1ms     |
