@@ -128,7 +128,7 @@
 //! use duration_str::deserialize_duration_chrono;
 //! use serde::*;
 //!
-`//! #[derive(Debug, Deserialize)]
+//! #[derive(Debug, Deserialize)]
 //! struct Config {
 //!     #[serde(deserialize_with = "deserialize_duration_chrono")]
 //!     time_ticker: Duration,
