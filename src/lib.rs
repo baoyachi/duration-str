@@ -356,7 +356,7 @@ mod dls_parser {
             "mon" | "month" => Ok((input, TimeUnit::Month)),
             "w" | "week" => Ok((input, TimeUnit::Week)),
             "d" | "day" => Ok((input, TimeUnit::Day)),
-            "h" | "hour" => Ok((input, TimeUnit::Hour)),
+            "h" | "hour" | "hr" => Ok((input, TimeUnit::Hour)),
             "m" | "min" | "minute" => Ok((input, TimeUnit::Minute)),
             "s" | "sec" | "second" => Ok((input, TimeUnit::Second)),
             "ms" | "msec" | "millisecond" => Ok((input, TimeUnit::MilliSecond)),
