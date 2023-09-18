@@ -186,7 +186,7 @@ pub use naive_date::{
 
 pub type DResult<T> = Result<T, DError>;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum DError {
     #[error("dls express error: `{0}`")]
     DSLError(String),
@@ -725,6 +725,7 @@ des_option_duration!(
 );
 
 #[cfg(test)]
+#[allow(clippy::identity_op)]
 mod tests {
     use super::*;
 
@@ -865,6 +866,27 @@ mod tests {
 
         let duration = parse("1m * 1m").unwrap();
         assert_eq!(duration, Duration::new(3600, 0));
+    }
+
+    #[test]
+    fn test_overflow_plus() {
+        let result = parse("10000000000000000y+60");
+        assert_eq!(result, Err(DError::OverflowError));
+    }
+
+    #[test]
+    fn test_max_mul() {
+        let duration = parse("580y*1").unwrap();
+        assert_eq!(
+            duration,
+            std::time::Duration::from_millis(18290880000) * 1000
+        );
+    }
+
+    #[test]
+    fn test_overflow_mul() {
+        let result = parse("580y*2");
+        assert_eq!(result, Err(DError::OverflowError));
     }
 }
 
