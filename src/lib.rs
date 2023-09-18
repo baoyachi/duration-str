@@ -194,6 +194,8 @@ pub enum DError {
     ParseError(String),
     #[error("`{0}`")]
     NormalError(String),
+    #[error("overflow error")]
+    OverflowError,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -242,7 +244,7 @@ impl TimeUnit {
             TimeUnit::MicroSecond => ONE_MICROSECOND_NANOSECOND,
             TimeUnit::NanoSecond => 1,
         };
-        Ok(time * unit)
+        time.checked_mul(unit).ok_or(DError::OverflowError)
     }
 }
 
@@ -269,15 +271,16 @@ impl CondUnit {
 
     fn calc(&self, x: u64, y: u64) -> DResult<Duration> {
         let nano_second = match self {
-            CondUnit::Plus => x + y,
+            CondUnit::Plus => x.checked_add(y).ok_or(DError::OverflowError)?,
             CondUnit::Star => {
                 let x: Decimal = x.into();
                 let y: Decimal = y.into();
-                let ret =
-                    (x / one_second_decimal()) * (y / one_second_decimal()) * one_second_decimal();
-                ret.to_u64().ok_or_else(|| {
-                    DError::ParseError(format!("type of Decimal:{} convert to u64 error", ret))
-                })?
+                let ret = (x / one_second_decimal())
+                    .checked_mul(y / one_second_decimal())
+                    .ok_or(DError::OverflowError)?
+                    .checked_mul(one_second_decimal())
+                    .ok_or(DError::OverflowError)?;
+                ret.to_u64().ok_or(DError::OverflowError)?
             }
         };
         Ok(Duration::from_nanos(nano_second))
@@ -303,15 +306,17 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
                 )));
             }
             match init_cond {
-                CondUnit::Plus => init_duration += time_unit.duration(val)?,
+                CondUnit::Plus => {
+                    init_duration = init_duration
+                        .checked_add(time_unit.duration(val)?)
+                        .ok_or(DError::OverflowError)?;
+                }
                 CondUnit::Star => {
                     let time: Decimal = time_unit.duration(val)?.into();
                     let i = time / one_second_decimal();
                     let mut init: Decimal = init_duration.into();
-                    init *= i;
-                    init_duration = init.to_u64().ok_or_else(|| {
-                        DError::ParseError(format!("type of Decimal:{} convert to u64 error", init))
-                    })?;
+                    init = init.checked_mul(i).ok_or(DError::OverflowError)?;
+                    init_duration = init.to_u64().ok_or(DError::OverflowError)?;
                 }
             }
         }
