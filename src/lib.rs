@@ -186,7 +186,7 @@ pub use naive_date::{
 
 pub type DResult<T> = Result<T, DError>;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum DError {
     #[error("dls express error: `{0}`")]
     DSLError(String),
@@ -194,6 +194,8 @@ pub enum DError {
     ParseError(String),
     #[error("`{0}`")]
     NormalError(String),
+    #[error("overflow error")]
+    OverflowError,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -242,7 +244,7 @@ impl TimeUnit {
             TimeUnit::MicroSecond => ONE_MICROSECOND_NANOSECOND,
             TimeUnit::NanoSecond => 1,
         };
-        Ok(time * unit)
+        time.checked_mul(unit).ok_or(DError::OverflowError)
     }
 }
 
@@ -269,15 +271,16 @@ impl CondUnit {
 
     fn calc(&self, x: u64, y: u64) -> DResult<Duration> {
         let nano_second = match self {
-            CondUnit::Plus => x + y,
+            CondUnit::Plus => x.checked_add(y).ok_or(DError::OverflowError)?,
             CondUnit::Star => {
                 let x: Decimal = x.into();
                 let y: Decimal = y.into();
-                let ret =
-                    (x / one_second_decimal()) * (y / one_second_decimal()) * one_second_decimal();
-                ret.to_u64().ok_or_else(|| {
-                    DError::ParseError(format!("type of Decimal:{} convert to u64 error", ret))
-                })?
+                let ret = (x / one_second_decimal())
+                    .checked_mul(y / one_second_decimal())
+                    .ok_or(DError::OverflowError)?
+                    .checked_mul(one_second_decimal())
+                    .ok_or(DError::OverflowError)?;
+                ret.to_u64().ok_or(DError::OverflowError)?
             }
         };
         Ok(Duration::from_nanos(nano_second))
@@ -303,15 +306,17 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
                 )));
             }
             match init_cond {
-                CondUnit::Plus => init_duration += time_unit.duration(val)?,
+                CondUnit::Plus => {
+                    init_duration = init_duration
+                        .checked_add(time_unit.duration(val)?)
+                        .ok_or(DError::OverflowError)?;
+                }
                 CondUnit::Star => {
                     let time: Decimal = time_unit.duration(val)?.into();
                     let i = time / one_second_decimal();
                     let mut init: Decimal = init_duration.into();
-                    init *= i;
-                    init_duration = init.to_u64().ok_or_else(|| {
-                        DError::ParseError(format!("type of Decimal:{} convert to u64 error", init))
-                    })?;
+                    init = init.checked_mul(i).ok_or(DError::OverflowError)?;
+                    init_duration = init.to_u64().ok_or(DError::OverflowError)?;
                 }
             }
         }
@@ -720,6 +725,7 @@ des_option_duration!(
 );
 
 #[cfg(test)]
+#[allow(clippy::identity_op)]
 mod tests {
     use super::*;
 
@@ -860,6 +866,27 @@ mod tests {
 
         let duration = parse("1m * 1m").unwrap();
         assert_eq!(duration, Duration::new(3600, 0));
+    }
+
+    #[test]
+    fn test_overflow_plus() {
+        let result = parse("10000000000000000y+60");
+        assert_eq!(result, Err(DError::OverflowError));
+    }
+
+    #[test]
+    fn test_max_mul() {
+        let duration = parse("580y*1").unwrap();
+        assert_eq!(
+            duration,
+            std::time::Duration::from_millis(18290880000) * 1000
+        );
+    }
+
+    #[test]
+    fn test_overflow_mul() {
+        let result = parse("580y*2");
+        assert_eq!(result, Err(DError::OverflowError));
     }
 }
 
