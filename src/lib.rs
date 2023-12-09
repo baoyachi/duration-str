@@ -228,8 +228,9 @@ fn one_second_decimal() -> Decimal {
 }
 
 impl TimeUnit {
-    fn duration(&self, time_str: &str) -> DResult<u64> {
+    fn duration(&self, time_str: impl AsRef<str>) -> DResult<u64> {
         let time = time_str
+            .as_ref()
             .parse::<u64>()
             .map_err(|err| DError::ParseError(err.to_string()))?;
         let unit = match self {
@@ -414,14 +415,14 @@ mod dls_parser {
 }
 
 /// parse string to `std::time::Duration`
-pub fn parse(input: &str) -> DResult<Duration> {
+pub fn parse(input: impl AsRef<str>) -> DResult<Duration> {
     let (in_input, ((time_str, time_unit), cond_opt)) =
-        tuple((parse_expr_time, opt(cond_time)))(input)
+        tuple((parse_expr_time, opt(cond_time)))(input.as_ref())
             .map_err(|e| DError::DSLError(format!("{}", e)))?;
     if !in_input.is_empty() && cond_opt.is_none() {
         return Err(DError::DSLError(format!(
             "unsupported duration string: [{}], caused by: [{}],",
-            input, in_input
+            input.as_ref(), in_input
         )));
     }
     let (init_cond, init_duration) = cond_opt
@@ -468,9 +469,8 @@ pub fn parse(input: &str) -> DResult<Duration> {
 /// let duration = parse("1m * 10").unwrap();
 /// assert_eq!(duration,Duration::new(600,0));
 /// ```
-pub fn parse_std<S: Into<String>>(input: S) -> DResult<Duration> {
-    let input = input.into();
-    parse(input.as_str())
+pub fn parse_std(input: impl AsRef<str>) -> DResult<Duration> {
+    parse(input.as_ref())
 }
 
 /// convert Into<String> to `chrono::Duration`
@@ -510,7 +510,7 @@ pub fn parse_std<S: Into<String>>(input: S) -> DResult<Duration> {
 /// assert_eq!(duration,Duration::seconds(600));
 /// ```
 #[cfg(feature = "chrono")]
-pub fn parse_chrono<S: Into<String>>(input: S) -> DResult<chrono::Duration> {
+pub fn parse_chrono(input: impl AsRef<str>) -> DResult<chrono::Duration> {
     let std_duration = parse_std(input)?;
     let duration = chrono::Duration::from_std(std_duration)
         .map_err(|e| DError::ParseError(format!("{}", e)))?;
@@ -554,7 +554,7 @@ pub fn parse_chrono<S: Into<String>>(input: S) -> DResult<chrono::Duration> {
 /// assert_eq!(duration,Duration::seconds(600));
 /// ```
 #[cfg(feature = "time")]
-pub fn parse_time<S: Into<String>>(input: S) -> DResult<time::Duration> {
+pub fn parse_time(input: impl AsRef<str>) -> DResult<time::Duration> {
     let std_duration = parse_std(input)?;
     let duration =
         time::Duration::try_from(std_duration).map_err(|e| DError::ParseError(format!("{}", e)))?;
@@ -573,8 +573,8 @@ mod naive_date {
     }
 
     #[cfg(feature = "chrono")]
-    pub fn calc_naive_date_time<S: Into<String>>(
-        input: S,
+    pub fn calc_naive_date_time(
+        input: impl AsRef<str>,
         history: TimeHistory,
     ) -> DResult<chrono::NaiveDateTime> {
         let duration = parse_chrono(input)?;
@@ -589,13 +589,13 @@ mod naive_date {
         ($date_time:ident,$date:ident,$history:expr) => {
             #[allow(dead_code)]
             #[cfg(feature = "chrono")]
-            pub fn $date_time<S: Into<String>>(input: S) -> DResult<chrono::NaiveDateTime> {
+            pub fn $date_time(input: impl AsRef<str>) -> DResult<chrono::NaiveDateTime> {
                 calc_naive_date_time(input, $history)
             }
 
             #[allow(dead_code)]
             #[cfg(feature = "chrono")]
-            pub fn $date<S: Into<String>>(input: S) -> DResult<chrono::NaiveDate> {
+            pub fn $date(input: impl AsRef<str>) -> DResult<chrono::NaiveDate> {
                 let date: chrono::NaiveDateTime = calc_naive_date_time(input, $history)?;
                 Ok(date.date())
             }
