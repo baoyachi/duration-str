@@ -422,7 +422,8 @@ pub fn parse(input: impl AsRef<str>) -> DResult<Duration> {
     if !in_input.is_empty() && cond_opt.is_none() {
         return Err(DError::DSLError(format!(
             "unsupported duration string: [{}], caused by: [{}],",
-            input.as_ref(), in_input
+            input.as_ref(),
+            in_input
         )));
     }
     let (init_cond, init_duration) = cond_opt
