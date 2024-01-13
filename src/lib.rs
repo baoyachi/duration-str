@@ -165,6 +165,8 @@
 //! }
 //! ```
 
+mod parser;
+
 #[cfg(all(feature = "chrono", feature = "serde"))]
 use chrono::Duration as CDuration;
 
@@ -174,6 +176,7 @@ use nom::sequence::tuple;
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::convert::TryFrom;
+use std::str::FromStr;
 use std::time::Duration;
 use thiserror::Error;
 #[cfg(all(feature = "time", feature = "serde"))]
@@ -210,6 +213,31 @@ enum TimeUnit {
     MilliSecond,
     MicroSecond,
     NanoSecond,
+}
+
+impl FromStr for TimeUnit {
+    type Err = DError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match &*s.to_lowercase() {
+            "y" | "year" => Ok(TimeUnit::Year),
+            "mon" | "month" => Ok(TimeUnit::Month),
+            "w" | "week" => Ok(TimeUnit::Week),
+            "d" | "day" => Ok(TimeUnit::Day),
+            "h" | "hour" | "hr" => Ok(TimeUnit::Hour),
+            "m" | "min" | "minute" => Ok(TimeUnit::Minute),
+            "s" | "sec" | "second" => Ok(TimeUnit::Second),
+            "ms" | "msec" | "millisecond" => Ok(TimeUnit::MilliSecond),
+            "µs" | "µsec" | "µsecond" | "us" | "usec" | "usecond" | "microsecond" => {
+                Ok(TimeUnit::MicroSecond)
+            }
+            "ns" | "nsec" | "nanosecond" => Ok(TimeUnit::NanoSecond),
+            _ => Err(DError::ParseError(format!(
+                "expect one of [y,mon,w,d,h,m,s,ms,µs,us,ns] or their longer forms.but find:{}",
+                s,
+            ))),
+        }
+    }
 }
 
 const ONE_MICROSECOND_NANOSECOND: u64 = 1000;
