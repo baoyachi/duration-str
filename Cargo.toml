@@ -1,6 +1,6 @@
 [package]
 name = "duration-str"
-version = "0.7.1"
+version = "0.8.0"
 authors = ["baoyachi <liaoymxsdl@gmail.com>"]
 edition = "2021"
 description = "duration string parser"
@@ -14,13 +14,13 @@ license = "Apache-2.0"
 default = ["chrono", "serde", "time"]
 
 [dependencies]
-nom = "7.1.1"
 thiserror = "1.0.37"
 chrono = { version = "0.4.23", optional = true }
 time = { version = "0.3.17", optional = true }
 
 serde = { version = "1.0.147", features = ["derive"], optional = true }
 rust_decimal = { version = "1.29.1", default-features = false }
+winnow = "0.6.6"
 
 [dev-dependencies]
 serde_json = { version = "1.0.87" }
