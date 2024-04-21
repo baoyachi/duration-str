@@ -1,6 +1,6 @@
 [package]
 name = "duration-str"
-version = "0.8.1"
+version = "0.8.1-pre"
 authors = ["baoyachi <liaoymxsdl@gmail.com>"]
 edition = "2021"
 description = "duration string parser"
