@@ -198,7 +198,7 @@ pub enum DError {
     OverflowError,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Default)]
 enum TimeUnit {
     Year,
     Month,
@@ -206,6 +206,7 @@ enum TimeUnit {
     Day,
     Hour,
     Minute,
+    #[default]
     Second,
     MilliSecond,
     MicroSecond,
