@@ -18,7 +18,12 @@ fn cond_unit(input: &mut &str) -> PResult<CondUnit> {
 }
 
 pub(crate) fn parse_expr_time(input: &mut &str) -> PResult<u64> {
-    (digit1, unit_abbr)
+    (
+        multispace0,
+        digit1,
+        opt(unit_abbr).map(Option::unwrap_or_default),
+    )
+        .map(|x| (x.1, x.2))
         .try_map(|(v, unit)| unit.duration(v))
         .parse_next(input)
 }
@@ -33,7 +38,7 @@ pub(crate) fn cond_time<'a>(input: &mut &'a str) -> PResult<Vec<(&'a str, CondUn
             digit1,
             // Add by default.
             // Parse unit, default is seconds.
-            opt(unit_abbr).map(|x| x.unwrap_or(TimeUnit::Second)),
+            opt(unit_abbr).map(Option::unwrap_or_default),
             multispace0,
         )
             .map(|x| (x.1, x.3, x.4))
@@ -151,88 +156,79 @@ mod tests {
     }
 
     #[test]
-    fn test_duration_parse1() {
-        let duration = crate::parse("1m+31").unwrap();
-        assert_eq!(duration, Duration::new(91, 0))
-    }
+    fn test_duration_parse0() {
+        let duration = parse("0").unwrap();
+        assert_eq!(duration, Duration::new(0, 0));
 
-    #[test]
-    fn test_duration_parse2() {
-        let duration = crate::parse("1m*60").unwrap();
-        assert_eq!(duration, Duration::new(3600, 0))
-    }
+        let duration = parse("1").unwrap();
+        assert_eq!(duration, Duration::new(1, 0));
 
-    #[test]
-    fn test_duration_parse3() {
-        let duration = crate::parse("1m*60*20").unwrap();
-        assert_eq!(duration, Duration::new(72000, 0))
-    }
+        let duration = parse("0m").unwrap();
+        assert_eq!(duration, Duration::new(0, 0));
 
-    #[test]
-    fn test_duration_parse4() {
-        let duration = crate::parse("1m+60+24").unwrap();
+        let duration = parse("1hr").unwrap();
+        assert_eq!(duration, Duration::new(3600, 0));
+
+        let duration = parse("1m+31").unwrap();
+        assert_eq!(duration, Duration::new(91, 0));
+
+        let duration = parse("1m*60").unwrap();
+        assert_eq!(duration, Duration::new(3600, 0));
+
+        let duration = parse("1m*60*20").unwrap();
+        assert_eq!(duration, Duration::new(72000, 0));
+
+        let duration = parse("1m+60+24").unwrap();
+        assert_eq!(duration, Duration::new(144, 0));
+
+        let duration = parse("1m+60+24 ").unwrap();
+        assert_eq!(duration, Duration::new(144, 0));
+
+        let duration = parse("      1m      +  60 +             24 ").unwrap();
         assert_eq!(duration, Duration::new(144, 0))
     }
 
     #[test]
-    fn test_duration_parse5() {
-        let duration = crate::parse("1m+60+24 ").unwrap();
-        assert_eq!(duration, Duration::new(144, 0))
-    }
-
-    #[test]
-    fn test_duration_parse6() {
-        let duration = crate::parse("0m").unwrap();
-        assert_eq!(duration, Duration::new(0, 0))
-    }
-
-    #[test]
-    fn test_duration_parse7() {
-        assert!(crate::parse("0m+3-5").is_err())
-    }
-
-    #[test]
-    fn test_duration_parse8() {
-        let duration = crate::parse("1hr").unwrap();
-        assert_eq!(duration, Duration::new(3600, 0))
+    fn test_duration_err() {
+        assert!(parse("0m+3-5").is_err())
     }
 
     #[test]
     fn test_parse() {
-        let duration = crate::parse("1d").unwrap();
+        let duration = parse("1d").unwrap();
         assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
 
-        let duration = crate::parse("3m+31").unwrap(); //the default duration unit is second.
+        let duration = parse("3m+31").unwrap(); //the default duration unit is second.
         assert_eq!(duration, Duration::new(211, 0));
 
-        let duration = crate::parse("3m + 31").unwrap(); //the default duration unit is second.
+        let duration = parse("3m + 31").unwrap(); //the default duration unit is second.
         assert_eq!(duration, Duration::new(211, 0));
 
-        let duration = crate::parse("3m + 13s + 29ms").unwrap();
+        let duration = parse("3m + 13s + 29ms").unwrap();
         assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
 
-        let duration = crate::parse("3m + 1s + 29ms +17µs").unwrap();
+        let duration = parse("3m + 1s + 29ms +17µs").unwrap();
         assert_eq!(
             duration,
             Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
         );
 
-        let duration = crate::parse("1m*10").unwrap(); //the default duration unit is second.
+        let duration = parse("1m*10").unwrap(); //the default duration unit is second.
         assert_eq!(duration, Duration::new(600, 0));
 
-        let duration = crate::parse("1m*10ms").unwrap();
+        let duration = parse("1m*10ms").unwrap();
         assert_eq!(duration, Duration::new(0, 600 * 1000 * 1000));
 
-        let duration = crate::parse("1m * 1ns").unwrap();
+        let duration = parse("1m * 1ns").unwrap();
         assert_eq!(duration, Duration::new(0, 60));
 
-        let duration = crate::parse("1m * 1m").unwrap();
+        let duration = parse("1m * 1m").unwrap();
         assert_eq!(duration, Duration::new(3600, 0));
     }
 
     #[test]
     fn test_overflow_plus() {
-        let result = crate::parse("10000000000000000y+60");
+        let result = parse("10000000000000000y+60");
         assert_eq!(
             result,
             Err(DSLError(
@@ -248,7 +244,7 @@ overflow error"#
 
     #[test]
     fn test_max_mul() {
-        let duration = crate::parse("580y*1").unwrap();
+        let duration = parse("580y*1").unwrap();
         assert_eq!(
             duration,
             std::time::Duration::from_millis(18290880000) * 1000
@@ -257,7 +253,7 @@ overflow error"#
 
     #[test]
     fn test_overflow_mul() {
-        let result = crate::parse("580y*2");
+        let result = parse("580y*2");
         assert_eq!(result, Err(DError::OverflowError));
     }
 }
