@@ -1,34 +1,92 @@
-use crate::{Calc, CondUnit, DError, DResult, TimeUnit};
+use crate::{Calc, CondUnit, TimeUnit};
+use std::fmt::{Display, Formatter};
 use std::time::Duration;
 use winnow::ascii::{digit1, multispace0};
-use winnow::combinator::{alt, opt};
-use winnow::stream::AsChar;
+use winnow::combinator::{alt, eof, opt};
+use winnow::error::{ErrMode, ErrorKind, FromExternalError, ParserError};
+use winnow::stream::{AsChar, Stream};
 use winnow::token::take_while;
 use winnow::PResult;
 use winnow::Parser;
 
-fn unit_abbr(input: &mut &str) -> PResult<TimeUnit> {
-    take_while(1.., |c: char| c.is_alpha() || c == 'µ')
-        .try_map(str::parse)
-        .parse_next(input)
+#[derive(Debug, PartialEq, Eq)]
+pub struct PError<I> {
+    partial_input: I,
+    kind: ErrorKind,
+    cause: String,
 }
 
-fn cond_unit(input: &mut &str) -> PResult<CondUnit> {
+impl<I> PError<I> {
+    fn new(input: I, kind: ErrorKind) -> Self {
+        PError {
+            partial_input: input,
+            kind,
+            cause: "".to_string(),
+        }
+    }
+}
+
+impl<I: Stream + Clone> ParserError<I> for PError<I> {
+    fn from_error_kind(input: &I, kind: ErrorKind) -> Self {
+        PError::new(input.clone(), kind)
+    }
+
+    fn append(self, _: &I, _: &<I as Stream>::Checkpoint, _: ErrorKind) -> Self {
+        self
+    }
+}
+
+impl<I: Clone, E: std::error::Error + Send + Sync + 'static> FromExternalError<I, E> for PError<I> {
+    #[inline]
+    fn from_external_error(input: &I, kind: ErrorKind, e: E) -> Self {
+        let mut err = Self::new(input.clone(), kind);
+        {
+            err.cause = e.to_string();
+        }
+        err
+    }
+}
+
+impl<I> Display for PError<I>
+where
+    I: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "partial_input:`{}`,{}", self.partial_input, self.kind)?;
+        if !self.cause.is_empty() {
+            write!(f, ",{}", self.cause)?;
+        }
+        Ok(())
+    }
+}
+
+fn unit_abbr<'a>(input: &mut &'a str) -> PResult<TimeUnit, PError<&'a str>> {
+    let checkpoint = input.checkpoint();
+    let val = take_while(1.., |c: char| c.is_alpha() || c == 'µ').parse_next(input)?;
+    str::parse(val).map_err(|err| {
+        input.reset(&checkpoint);
+        ErrMode::from_external_error(input, ErrorKind::Fail, err)
+    })
+}
+
+fn cond_unit<'a>(input: &mut &'a str) -> PResult<CondUnit, PError<&'a str>> {
     alt(('+'.value(CondUnit::Plus), '*'.value(CondUnit::Star))).parse_next(input)
 }
 
-pub(crate) fn parse_expr_time(input: &mut &str) -> PResult<u64> {
+pub(crate) fn parse_expr_time<'a>(input: &mut &'a str) -> PResult<u64, PError<&'a str>> {
     (
         multispace0,
         digit1,
-        opt(unit_abbr).map(Option::unwrap_or_default),
+        alt(((multispace0, eof).value(TimeUnit::default()), unit_abbr)),
     )
         .map(|x| (x.1, x.2))
         .try_map(|(v, unit)| unit.duration(v))
         .parse_next(input)
 }
 
-pub(crate) fn cond_time<'a>(input: &mut &'a str) -> PResult<Vec<(&'a str, CondUnit, TimeUnit)>> {
+pub(crate) fn cond_time<'a>(
+    input: &mut &'a str,
+) -> PResult<Vec<(&'a str, CondUnit, TimeUnit)>, PError<&'a str>> {
     let mut vec = vec![];
     while !input.trim().is_empty() {
         let (cond, out, time_unit) = (
@@ -49,16 +107,19 @@ pub(crate) fn cond_time<'a>(input: &mut &'a str) -> PResult<Vec<(&'a str, CondUn
     Ok(vec)
 }
 
-pub fn parse(input: impl AsRef<str>) -> DResult<Duration> {
+pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
     let input = input.as_ref();
     let (unit_time, cond_opt) = (parse_expr_time, opt(cond_time))
         .parse(input)
-        .map_err(|e| DError::DSLError(format!("{}", e)))?;
+        .map_err(|e| format!("{}", e))?;
 
     let (init_cond, init_duration) = cond_opt
         .map(|val| val.calc())
-        .unwrap_or_else(|| Ok(CondUnit::init()))?;
-    let duration = init_cond.calc(unit_time, init_duration)?;
+        .unwrap_or_else(|| Ok(CondUnit::init()))
+        .map_err(|err| err.to_string())?;
+    let duration = init_cond
+        .calc(unit_time, init_duration)
+        .map_err(|err| err.to_string())?;
     Ok(duration)
 }
 
@@ -66,8 +127,7 @@ pub fn parse(input: impl AsRef<str>) -> DResult<Duration> {
 #[allow(clippy::identity_op)]
 mod tests {
     use super::*;
-    use crate::DError::DSLError;
-    use crate::{CondUnit, DError, TimeUnit};
+    use crate::{CondUnit, TimeUnit};
     use winnow::Partial;
 
     #[test]
@@ -160,6 +220,12 @@ mod tests {
         let duration = parse("0").unwrap();
         assert_eq!(duration, Duration::new(0, 0));
 
+        let duration = parse("0    ").unwrap();
+        assert_eq!(duration, Duration::new(0, 0));
+
+        let duration = parse("     0    ").unwrap();
+        assert_eq!(duration, Duration::new(0, 0));
+
         let duration = parse("1").unwrap();
         assert_eq!(duration, Duration::new(1, 0));
 
@@ -190,7 +256,31 @@ mod tests {
 
     #[test]
     fn test_duration_err() {
-        assert!(parse("0m+3-5").is_err())
+        assert_eq!(
+            parse("0m+3-5").err().unwrap(),
+            r#"
+0m+3-5
+  ^
+partial_input:`+3-5`,error Eof"#
+                .trim()
+        );
+
+        let err = format!("{}", parse("0mxyz").err().unwrap());
+        assert_eq!(err, r#"
+0mxyz
+ ^
+partial_input:`mxyz`,error Fail,`expect one of [y,mon,w,d,h,m,s,ms,µs,us,ns] or their longer forms.but find:mxyz`"#.trim());
+
+        //TODO lost cause, need fix
+        let err = format!("{}", parse("3ms-2ms").err().unwrap());
+        assert_eq!(
+            err,
+            r#"
+3ms-2ms
+   ^
+partial_input:`-2ms`,error Eof"#
+                .trim()
+        );
     }
 
     #[test]
@@ -231,14 +321,12 @@ mod tests {
         let result = parse("10000000000000000y+60");
         assert_eq!(
             result,
-            Err(DSLError(
-                r#"
+            Err(r#"
 10000000000000000y+60
 ^
-overflow error"#
-                    .trim()
-                    .to_string()
-            ))
+partial_input:`10000000000000000y+60`,error Verify,overflow error"#
+                .trim()
+                .to_string())
         );
     }
 
@@ -253,8 +341,8 @@ overflow error"#
 
     #[test]
     fn test_overflow_mul() {
-        let result = parse("580y*2");
-        assert_eq!(result, Err(DError::OverflowError));
+        let err = parse("580y*2").err().unwrap();
+        assert_eq!(err, "overflow error");
     }
 }
 
