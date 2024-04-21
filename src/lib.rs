@@ -188,9 +188,7 @@ pub type DResult<T> = Result<T, DError>;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum DError {
-    #[error("dls express error: `{0}`")]
-    DSLError(String),
-    #[error("parser error: `{0}`")]
+    #[error("`{0}`")]
     ParseError(String),
     #[error("`{0}`")]
     NormalError(String),
@@ -198,7 +196,7 @@ pub enum DError {
     OverflowError,
 }
 
-#[derive(Debug, Eq, PartialEq, Default)]
+#[derive(Debug, Eq, PartialEq, Default, Clone)]
 enum TimeUnit {
     Year,
     Month,
@@ -396,7 +394,7 @@ impl ToString for CondUnit {
 /// let duration = parse("1m * 10").unwrap();
 /// assert_eq!(duration,Duration::new(600,0));
 /// ```
-pub fn parse_std(input: impl AsRef<str>) -> DResult<Duration> {
+pub fn parse_std(input: impl AsRef<str>) -> Result<Duration, String> {
     parse(input.as_ref())
 }
 
@@ -437,10 +435,9 @@ pub fn parse_std(input: impl AsRef<str>) -> DResult<Duration> {
 /// assert_eq!(duration,Duration::seconds(600));
 /// ```
 #[cfg(feature = "chrono")]
-pub fn parse_chrono(input: impl AsRef<str>) -> DResult<chrono::Duration> {
+pub fn parse_chrono(input: impl AsRef<str>) -> Result<chrono::Duration, String> {
     let std_duration = parse_std(input)?;
-    let duration = chrono::Duration::from_std(std_duration)
-        .map_err(|e| DError::ParseError(format!("{}", e)))?;
+    let duration = chrono::Duration::from_std(std_duration).map_err(|e| e.to_string())?;
     Ok(duration)
 }
 
@@ -481,16 +478,15 @@ pub fn parse_chrono(input: impl AsRef<str>) -> DResult<chrono::Duration> {
 /// assert_eq!(duration,Duration::seconds(600));
 /// ```
 #[cfg(feature = "time")]
-pub fn parse_time(input: impl AsRef<str>) -> DResult<time::Duration> {
+pub fn parse_time(input: impl AsRef<str>) -> Result<time::Duration, String> {
     let std_duration = parse_std(input)?;
-    let duration =
-        time::Duration::try_from(std_duration).map_err(|e| DError::ParseError(format!("{}", e)))?;
+    let duration = time::Duration::try_from(std_duration).map_err(|e| e.to_string())?;
     Ok(duration)
 }
 
 #[cfg(feature = "chrono")]
 mod naive_date {
-    use crate::{parse_chrono, DResult};
+    use crate::parse_chrono;
     use chrono::Utc;
 
     #[allow(dead_code)]
@@ -503,7 +499,7 @@ mod naive_date {
     pub fn calc_naive_date_time(
         input: impl AsRef<str>,
         history: TimeHistory,
-    ) -> DResult<chrono::NaiveDateTime> {
+    ) -> Result<chrono::NaiveDateTime, String> {
         let duration = parse_chrono(input)?;
         let time = match history {
             TimeHistory::Before => (Utc::now() - duration).naive_utc(),
@@ -516,13 +512,13 @@ mod naive_date {
         ($date_time:ident,$date:ident,$history:expr) => {
             #[allow(dead_code)]
             #[cfg(feature = "chrono")]
-            pub fn $date_time(input: impl AsRef<str>) -> DResult<chrono::NaiveDateTime> {
+            pub fn $date_time(input: impl AsRef<str>) -> Result<chrono::NaiveDateTime, String> {
                 calc_naive_date_time(input, $history)
             }
 
             #[allow(dead_code)]
             #[cfg(feature = "chrono")]
-            pub fn $date(input: impl AsRef<str>) -> DResult<chrono::NaiveDate> {
+            pub fn $date(input: impl AsRef<str>) -> Result<chrono::NaiveDate, String> {
                 let date: chrono::NaiveDateTime = calc_naive_date_time(input, $history)?;
                 Ok(date.date())
             }
