@@ -1,8 +1,8 @@
 #[cfg(all(feature = "chrono", feature = "serde"))]
 use crate::parse_chrono;
+use crate::parse_std;
 #[cfg(all(feature = "time", feature = "serde"))]
 use crate::parse_time;
-use crate::parse_std;
 use std::time::Duration;
 
 #[cfg(all(feature = "chrono", feature = "serde"))]
