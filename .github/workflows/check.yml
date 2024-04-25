@@ -45,6 +45,8 @@ jobs:
         run: cargo run --example deserialize_duration
       - name: Run examples with deserialize_duration_chrono
         run: cargo run --example deserialize_duration_chrono
+      - name: Run examples with deserialize_duration_time
+        run: cargo run --example deserialize_duration_time
 
       # build on nightly
       - uses: actions-rs/toolchain@v1
