@@ -172,6 +172,7 @@ mod serde;
 pub use parser::parse;
 #[cfg(feature = "serde")]
 pub use serde::*;
+use std::fmt::{Debug, Display};
 
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
@@ -197,7 +198,7 @@ pub enum DError {
 }
 
 #[derive(Debug, Eq, PartialEq, Default, Clone)]
-enum TimeUnit {
+pub(crate) enum TimeUnit {
     Year,
     Month,
     Week,
@@ -228,11 +229,22 @@ impl FromStr for TimeUnit {
                 Ok(TimeUnit::MicroSecond)
             }
             "ns" | "nsec" | "nanosecond" => Ok(TimeUnit::NanoSecond),
-            _ => Err(DError::ParseError(format!(
-                "expect one of [y,mon,w,d,h,m,s,ms,µs,us,ns] or their longer forms.but find:{}",
-                s,
-            ))),
+            _ => Err(DError::ParseError(Self::expect_err(s))),
         }
+    }
+}
+
+impl ExpectErr<11> for TimeUnit {
+    fn expect_val() -> [&'static str; 11] {
+        ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]
+    }
+
+    fn expect_err<S: AsRef<str> + Display>(s: S) -> String {
+        format!(
+            "expect one of :{:?} or their longer forms, but find:{}",
+            Self::expect_val(),
+            s,
+        )
     }
 }
 
@@ -276,10 +288,37 @@ impl TimeUnit {
 const PLUS: &str = "+";
 const STAR: &str = "*";
 
+trait ExpectErr<const LEN: usize> {
+    fn expect_val() -> [&'static str; LEN];
+    fn expect_err<S: AsRef<str> + Display>(s: S) -> String;
+}
+
 #[derive(Debug, Eq, PartialEq, Clone)]
 enum CondUnit {
     Plus,
     Star,
+}
+
+impl FromStr for CondUnit {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "+" => Ok(CondUnit::Plus),
+            "*" => Ok(CondUnit::Star),
+            _ => Err(Self::expect_err(s)),
+        }
+    }
+}
+
+impl ExpectErr<2> for CondUnit {
+    fn expect_val() -> [&'static str; 2] {
+        ["+", "*"]
+    }
+
+    fn expect_err<S: AsRef<str> + Display>(s: S) -> String {
+        format!("expect one of:['+','*'], but find:{}", s)
+    }
 }
 
 impl CondUnit {
