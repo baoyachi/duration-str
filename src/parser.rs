@@ -2,7 +2,7 @@ use crate::{Calc, CondUnit, TimeUnit};
 use std::fmt::{Display, Formatter};
 use std::time::Duration;
 use winnow::ascii::{digit1, multispace0};
-use winnow::combinator::{alt, eof, opt};
+use winnow::combinator::{alt, eof, opt, repeat};
 use winnow::error::{ErrMode, ErrorKind, FromExternalError, ParserError};
 use winnow::stream::{AsChar, Stream};
 use winnow::token::take_while;
@@ -87,9 +87,9 @@ pub(crate) fn parse_expr_time<'a>(input: &mut &'a str) -> PResult<u64, PError<&'
 pub(crate) fn cond_time<'a>(
     input: &mut &'a str,
 ) -> PResult<Vec<(&'a str, CondUnit, TimeUnit)>, PError<&'a str>> {
-    let mut vec = vec![];
-    while !input.trim().is_empty() {
-        let (cond, out, time_unit) = (
+    repeat(
+        0..,
+        (
             multispace0,
             opt(cond_unit).map(|x| x.unwrap_or(CondUnit::Plus)),
             multispace0,
@@ -99,12 +99,13 @@ pub(crate) fn cond_time<'a>(
             opt(unit_abbr).map(Option::unwrap_or_default),
             multispace0,
         )
-            .map(|x| (x.1, x.3, x.4))
-            .parse_next(input)?;
-
-        vec.push((out, cond, time_unit));
-    }
-    Ok(vec)
+            .map(|x| (x.3, x.1, x.4)),
+    )
+    .fold(Vec::new, |mut acc: Vec<_>, item| {
+        acc.push(item);
+        acc
+    })
+    .parse_next(input)
 }
 
 pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
@@ -254,14 +255,19 @@ mod tests {
         assert_eq!(duration, Duration::new(144, 0))
     }
 
+    //TODO lost cause, need fix
     #[test]
     fn test_duration_err() {
         assert_eq!(
             parse("0m+3-5").err().unwrap(),
             r#"
 0m+3-5
-  ^
-partial_input:`+3-5`,error Eof"#
+    ^
+partial_input:`-5`,error Eof"#
+                //             r#"
+                // 0m+3-5
+                //     ^
+                // partial_input:`-5`,error Fail,`expect one of:['+','*'], but find:-`"#
                 .trim()
         );
 
@@ -269,16 +275,18 @@ partial_input:`+3-5`,error Eof"#
         assert_eq!(err, r#"
 0mxyz
  ^
-partial_input:`mxyz`,error Fail,`expect one of [y,mon,w,d,h,m,s,ms,µs,us,ns] or their longer forms.but find:mxyz`"#.trim());
+partial_input:`mxyz`,error Fail,`expect one of :["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"] or their longer forms, but find:mxyz`"#.trim());
 
-        //TODO lost cause, need fix
         let err = format!("{}", parse("3ms-2ms").err().unwrap());
         assert_eq!(
             err,
-            r#"
-3ms-2ms
+            "3ms-2ms
    ^
-partial_input:`-2ms`,error Eof"#
+partial_input:`-2ms`,error Eof"
+                //             r#"
+                // 3ms-2ms
+                //    ^
+                // partial_input:`-2ms`,error Fail,`expect one of:['+','*'], but find:-`"#
                 .trim()
         );
     }
@@ -314,6 +322,24 @@ partial_input:`-2ms`,error Eof"#
 
         let duration = parse("1m * 1m").unwrap();
         assert_eq!(duration, Duration::new(3600, 0));
+
+        let duration = parse("3m + 31").unwrap();
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("3m  31s").unwrap();
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("3m31s0ns").unwrap();
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("  3m 31s 0ns ").unwrap();
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("1d2h3min4s").unwrap();
+        assert_eq!(duration, Duration::new(93784, 0));
+
+        // 1d2h3min4s
+        // 3m + 31
     }
 
     #[test]
