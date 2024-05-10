@@ -1,6 +1,6 @@
 use crate::error::PError;
 use crate::{
-    DError, DResult, ExpectErr, ONE_DAY_NANOSECOND, ONE_HOUR_NANOSECOND,
+    CondUnit, DError, DResult, ExpectErr, ONE_DAY_NANOSECOND, ONE_HOUR_NANOSECOND,
     ONE_MICROSECOND_NANOSECOND, ONE_MILLISECOND_NANOSECOND, ONE_MINUTE_NANOSECOND,
     ONE_MONTH_NANOSECOND, ONE_SECOND_NANOSECOND, ONE_WEEK_NANOSECOND, ONE_YEAR_NANOSECOND,
 };
@@ -112,7 +112,7 @@ pub(crate) fn opt_unit_abbr<'a>(input: &mut &'a str) -> PResult<TimeUnit, PError
             return Ok(TimeUnit::default());
         }
 
-        if peek((multispace, one_of(|c| c == '+' || c == '*')))
+        if peek((multispace, one_of(CondUnit::contain)))
             .parse_next(input)
             .is_ok()
         {

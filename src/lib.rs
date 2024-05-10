@@ -247,6 +247,10 @@ impl CondUnit {
         (CondUnit::Star, ONE_SECOND_NANOSECOND)
     }
 
+    fn contain(c: char) -> bool {
+        Self::expect_val().contains(&&*c.to_string())
+    }
+
     fn change_duration(&self) -> u64 {
         match self {
             CondUnit::Plus => 0,
