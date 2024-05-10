@@ -287,8 +287,8 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
             } else if &init_cond != cond {
                 return Err(DError::ParseError(format!(
                     "not support '{}' with '{}' calculate",
-                    init_cond.to_string(),
-                    cond.to_string()
+                    init_cond,
+                    cond
                 )));
             }
             match init_cond {
