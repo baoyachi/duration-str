@@ -54,6 +54,9 @@ fn main() {
     let duration = parse("3m + 31").unwrap(); //the default duration unit is second.
     assert_eq!(duration, Duration::new(211, 0));
 
+    let duration = parse("3m31s").unwrap();
+    assert_eq!(duration, Duration::new(211, 0));
+
     let duration = parse("3m + 13s + 29ms").unwrap();
     assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
 

@@ -165,76 +165,31 @@
 //! }
 //! ```
 
+mod error;
+pub(crate) mod macros;
 mod parser;
 #[cfg(feature = "serde")]
 mod serde;
+mod unit;
 
 pub use parser::parse;
 #[cfg(feature = "serde")]
 pub use serde::*;
+use std::fmt::{Debug, Display};
 
 use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use std::time::Duration;
-use thiserror::Error;
 
+use crate::error::DError;
+use crate::unit::TimeUnit;
 #[cfg(feature = "chrono")]
 pub use naive_date::{
     after_naive_date, after_naive_date_time, before_naive_date, before_naive_date_time,
 };
 
 pub type DResult<T> = Result<T, DError>;
-
-#[derive(Error, Debug, PartialEq)]
-pub enum DError {
-    #[error("`{0}`")]
-    ParseError(String),
-    #[error("`{0}`")]
-    NormalError(String),
-    #[error("overflow error")]
-    OverflowError,
-}
-
-#[derive(Debug, Eq, PartialEq, Default, Clone)]
-enum TimeUnit {
-    Year,
-    Month,
-    Week,
-    Day,
-    Hour,
-    Minute,
-    #[default]
-    Second,
-    MilliSecond,
-    MicroSecond,
-    NanoSecond,
-}
-
-impl FromStr for TimeUnit {
-    type Err = DError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match &*s.to_lowercase() {
-            "y" | "year" => Ok(TimeUnit::Year),
-            "mon" | "month" => Ok(TimeUnit::Month),
-            "w" | "week" => Ok(TimeUnit::Week),
-            "d" | "day" => Ok(TimeUnit::Day),
-            "h" | "hour" | "hr" => Ok(TimeUnit::Hour),
-            "m" | "min" | "minute" => Ok(TimeUnit::Minute),
-            "s" | "sec" | "second" => Ok(TimeUnit::Second),
-            "ms" | "msec" | "millisecond" => Ok(TimeUnit::MilliSecond),
-            "µs" | "µsec" | "µsecond" | "us" | "usec" | "usecond" | "microsecond" => {
-                Ok(TimeUnit::MicroSecond)
-            }
-            "ns" | "nsec" | "nanosecond" => Ok(TimeUnit::NanoSecond),
-            _ => Err(DError::ParseError(format!(
-                "expect one of [y,mon,w,d,h,m,s,ms,µs,us,ns] or their longer forms.but find:{}",
-                s,
-            ))),
-        }
-    }
-}
 
 const ONE_MICROSECOND_NANOSECOND: u64 = 1000;
 const ONE_MILLISECOND_NANOSECOND: u64 = 1000 * ONE_MICROSECOND_NANOSECOND;
@@ -251,35 +206,40 @@ fn one_second_decimal() -> Decimal {
     1_000_000_000.into()
 }
 
-impl TimeUnit {
-    fn duration(&self, time_str: impl AsRef<str>) -> DResult<u64> {
-        let time = time_str
-            .as_ref()
-            .parse::<u64>()
-            .map_err(|err| DError::ParseError(err.to_string()))?;
-        let unit = match self {
-            TimeUnit::Year => ONE_YEAR_NANOSECOND,
-            TimeUnit::Month => ONE_MONTH_NANOSECOND,
-            TimeUnit::Week => ONE_WEEK_NANOSECOND,
-            TimeUnit::Day => ONE_DAY_NANOSECOND,
-            TimeUnit::Hour => ONE_HOUR_NANOSECOND,
-            TimeUnit::Minute => ONE_MINUTE_NANOSECOND,
-            TimeUnit::Second => ONE_SECOND_NANOSECOND,
-            TimeUnit::MilliSecond => ONE_MILLISECOND_NANOSECOND,
-            TimeUnit::MicroSecond => ONE_MICROSECOND_NANOSECOND,
-            TimeUnit::NanoSecond => 1,
-        };
-        time.checked_mul(unit).ok_or(DError::OverflowError)
-    }
-}
-
 const PLUS: &str = "+";
 const STAR: &str = "*";
+
+trait ExpectErr<const LEN: usize> {
+    fn expect_val() -> [&'static str; LEN];
+    fn expect_err<S: AsRef<str> + Display>(s: S) -> String;
+}
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 enum CondUnit {
     Plus,
     Star,
+}
+
+impl FromStr for CondUnit {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "+" => Ok(CondUnit::Plus),
+            "*" => Ok(CondUnit::Star),
+            _ => Err(Self::expect_err(s)),
+        }
+    }
+}
+
+impl ExpectErr<2> for CondUnit {
+    fn expect_val() -> [&'static str; 2] {
+        ["+", "*"]
+    }
+
+    fn expect_err<S: AsRef<str> + Display>(s: S) -> String {
+        format!("expect one of:{:?}, but find:{}", Self::expect_val(), s)
+    }
 }
 
 impl CondUnit {
@@ -324,10 +284,9 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
                 init_cond = cond.clone();
                 init_duration = init_cond.change_duration();
             } else if &init_cond != cond {
-                return Err(DError::NormalError(format!(
+                return Err(DError::ParseError(format!(
                     "not support '{}' with '{}' calculate",
-                    init_cond.to_string(),
-                    cond.to_string()
+                    init_cond, cond
                 )));
             }
             match init_cond {
@@ -349,12 +308,13 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
     }
 }
 
-impl ToString for CondUnit {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for CondUnit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             Self::Plus => PLUS.to_string(),
             Self::Star => STAR.to_string(),
-        }
+        };
+        write!(f, "{}", str)
     }
 }
 
