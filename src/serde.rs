@@ -1,4 +1,8 @@
-use crate::{parse_chrono, parse_std, parse_time};
+#[cfg(all(feature = "chrono", feature = "serde"))]
+use crate::parse_chrono;
+use crate::parse_std;
+#[cfg(all(feature = "time", feature = "serde"))]
+use crate::parse_time;
 use std::time::Duration;
 
 #[cfg(all(feature = "chrono", feature = "serde"))]
@@ -160,7 +164,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(all(feature = "serde", feature = "chrono"))]
     #[test]
     fn test_deserialize_duration_chrono() {
         use chrono::Duration;
@@ -177,7 +181,7 @@ mod tests {
         );
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(all(feature = "serde", feature = "chrono"))]
     #[test]
     fn test_deserialize_option_duration_chrono() {
         use chrono::Duration;
