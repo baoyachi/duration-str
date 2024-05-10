@@ -165,6 +165,8 @@
 //! }
 //! ```
 
+mod error;
+pub(crate) mod macros;
 mod parser;
 #[cfg(feature = "serde")]
 mod serde;
@@ -179,8 +181,8 @@ use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use std::time::Duration;
-use thiserror::Error;
 
+use crate::error::DError;
 use crate::unit::TimeUnit;
 #[cfg(feature = "chrono")]
 pub use naive_date::{
@@ -188,16 +190,6 @@ pub use naive_date::{
 };
 
 pub type DResult<T> = Result<T, DError>;
-
-#[derive(Error, Debug, PartialEq)]
-pub enum DError {
-    #[error("`{0}`")]
-    ParseError(String),
-    #[error("`{0}`")]
-    NormalError(String),
-    #[error("overflow error")]
-    OverflowError,
-}
 
 const ONE_MICROSECOND_NANOSECOND: u64 = 1000;
 const ONE_MILLISECOND_NANOSECOND: u64 = 1000 * ONE_MICROSECOND_NANOSECOND;
@@ -222,9 +214,10 @@ trait ExpectErr<const LEN: usize> {
     fn expect_err<S: AsRef<str> + Display>(s: S) -> String;
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, Default)]
 enum CondUnit {
     Plus,
+    #[default]
     Star,
 }
 
@@ -292,7 +285,7 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
                 init_cond = cond.clone();
                 init_duration = init_cond.change_duration();
             } else if &init_cond != cond {
-                return Err(DError::NormalError(format!(
+                return Err(DError::ParseError(format!(
                     "not support '{}' with '{}' calculate",
                     init_cond.to_string(),
                     cond.to_string()
@@ -317,12 +310,13 @@ impl Calc<(CondUnit, u64)> for Vec<(&str, CondUnit, TimeUnit)> {
     }
 }
 
-impl ToString for CondUnit {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for CondUnit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
             Self::Plus => PLUS.to_string(),
             Self::Star => STAR.to_string(),
-        }
+        };
+        write!(f, "{}", str)
     }
 }
 
