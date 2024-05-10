@@ -214,10 +214,9 @@ trait ExpectErr<const LEN: usize> {
     fn expect_err<S: AsRef<str> + Display>(s: S) -> String;
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Default)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 enum CondUnit {
     Plus,
-    #[default]
     Star,
 }
 
@@ -239,7 +238,7 @@ impl ExpectErr<2> for CondUnit {
     }
 
     fn expect_err<S: AsRef<str> + Display>(s: S) -> String {
-        format!("expect one of:['+','*'], but find:{}", s)
+        format!("expect one of:{:?}, but find:{}", Self::expect_val(), s)
     }
 }
 
