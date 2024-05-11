@@ -3,6 +3,7 @@
 [![Chrono GitHub Actions](https://github.com/baoyachi/duration-str-rs/actions/workflows/check.yml/badge.svg)](https://github.com/baoyachi/duration-str-rs/actions?query=workflow%3Abuild)
 [![Crates.io](https://img.shields.io/crates/v/duration-str.svg)](https://crates.io/crates/duration-str)
 [![Docs.rs](https://docs.rs/duration-str/badge.svg)](https://docs.rs/duration-str)
+[![Coverage Status](https://coveralls.io/repos/github/baoyachi/duration-str/badge.svg?branch=master)](https://coveralls.io/github/baoyachi/duration-str?branch=master)
 
 ## Support
 The [duration-str](https://crates.io/crates/duration-str) support multiple Duration:
