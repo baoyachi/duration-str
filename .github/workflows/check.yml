@@ -93,6 +93,39 @@ jobs:
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+  deploy-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install Rust and wasm-pack
+        run: |
+          rustup update stable
+          cargo +stable install wasm-pack
+
+      - name: Build WebAssembly module with wasm-pack
+        run:  wasm-pack build --target bundler --out-dir ../site/pkg --release
+        working-directory: ./playground/wasm
+
+      - name: Install dependencies with pnpm
+        run: |
+          npm install -g pnpm
+          pnpm install
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./playground/site/dist
   publish-crate:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
