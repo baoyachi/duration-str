@@ -166,6 +166,7 @@
 //! ```
 
 mod error;
+pub mod ext;
 pub(crate) mod macros;
 mod parser;
 #[cfg(feature = "serde")]

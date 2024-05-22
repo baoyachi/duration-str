@@ -1,14 +1,30 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+shadow!(shadow);
+
+use serde_json::json;
+use shadow_rs::shadow;
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+pub fn version() -> JsValue {
+    let json = json!({
+        "branch/tag":if shadow::BRANCH.is_empty(){ shadow::BRANCH} else{shadow::LAST_TAG},
+        "commit_hash":shadow::SHORT_COMMIT,
+        "build_time":shadow::BUILD_TIME,
+    });
+    let val = json.to_string();
+    serde_wasm_bindgen::to_value(&val).unwrap()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+#[wasm_bindgen]
+pub fn parse(input: JsValue) -> JsValue {
+    let input = input.as_string().unwrap();
+    let json = match duration_str::parse(input) {
+        Ok(d) => json!({
+            "ok":d.as_nanos(),
+        }),
+        Err(e) => json!({
+            "err":e,
+        }),
+    };
+    serde_wasm_bindgen::to_value(&json).unwrap()
 }
