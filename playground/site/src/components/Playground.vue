@@ -55,7 +55,6 @@ export default {
           this.appendToOutput('Available commands: help, version, [duration-str]' + '\n');
           break;
         case 'version':
-          console.log("hello")
           const version = this.wasmLib.version();
           this.appendToOutput(version + '\n');
           break;
