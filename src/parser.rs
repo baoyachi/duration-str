@@ -41,7 +41,7 @@ fn opt_cond_unit<'a>(input: &mut &'a str) -> PResult<CondUnit, PError<&'a str>> 
 }
 
 pub(crate) fn parse_expr_time<'a>(input: &mut &'a str) -> PResult<u64, PError<&'a str>> {
-    (multispace0, digit1, opt_unit_abbr)
+    (multispace0, digit1, opt_unit_abbr, multispace0)
         .map(|x| (x.1, x.2))
         .try_map(|(v, unit)| unit.duration(v))
         .parse_next(input)
@@ -201,6 +201,15 @@ partial_input:-2ms, expect one of:["+", "*"], but find:-2ms"#
     #[test]
     fn test_parse() {
         let duration = parse("1d").unwrap();
+        assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
+
+        let duration = parse("   1d").unwrap();
+        assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
+
+        let duration = parse("1d   ").unwrap();
+        assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
+
+        let duration = parse("   1d   ").unwrap();
         assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
 
         let duration = parse("3m+31").unwrap(); //the default duration unit is second.
