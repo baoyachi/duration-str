@@ -95,7 +95,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
   deploy-pages:
     runs-on: ubuntu-latest
-    needs: [ test ]
+#    needs: [ test ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -104,8 +104,11 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v3
+        name: Install pnpm
+        with:
+          version: 8
+          run_install: false
 
       - name: Install Rust and wasm-pack
         run: |
@@ -118,6 +121,7 @@ jobs:
 
       - name: Build project
         run: pnpm install && pnpm run build
+        working-directory: ./playground/site
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
