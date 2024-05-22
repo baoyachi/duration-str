@@ -91,7 +91,7 @@ impl HumanFormat for TDuration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{parse, parse_chrono, parse_time};
+    use crate::parse;
 
     #[test]
     fn test_human_format() {
@@ -117,44 +117,44 @@ mod tests {
     #[cfg(all(feature = "serde", feature = "chrono"))]
     #[test]
     fn test_human_format_chrono() {
-        let duration = parse_chrono("0s").unwrap();
+        let duration = crate::parse_chrono("0s").unwrap();
         assert_eq!(duration.human_format(), "0s");
 
-        let duration = parse_chrono("1y 12d 3s").unwrap();
+        let duration = crate::parse_chrono("1y 12d 3s").unwrap();
         assert_eq!(duration.human_format(), "1y 1w 5d 3s");
 
-        let duration = parse_chrono("751d 1mon 3week 5d 2ns").unwrap();
+        let duration = crate::parse_chrono("751d 1mon 3week 5d 2ns").unwrap();
         assert_eq!(duration.human_format(), "2y 2mon 2w 3d 2ns");
 
-        let duration = parse_chrono("    7h    ").unwrap();
+        let duration = crate::parse_chrono("    7h    ").unwrap();
         assert_eq!(duration.human_format(), "7h");
 
-        let duration = parse_chrono("    7h  1s  ").unwrap();
+        let duration = crate::parse_chrono("    7h  1s  ").unwrap();
         assert_eq!(duration.human_format(), "7h 1s");
 
-        let duration = parse_chrono("    7h  0s  ").unwrap();
+        let duration = crate::parse_chrono("    7h  0s  ").unwrap();
         assert_eq!(duration.human_format(), "7h");
     }
 
     #[cfg(all(feature = "serde", feature = "time"))]
     #[test]
     fn test_human_format_time() {
-        let duration = parse_time("0s").unwrap();
+        let duration = crate::parse_time("0s").unwrap();
         assert_eq!(duration.human_format(), "0s");
 
-        let duration = parse_time("1y 12d 3s").unwrap();
+        let duration = crate::parse_time("1y 12d 3s").unwrap();
         assert_eq!(duration.human_format(), "1y 1w 5d 3s");
 
-        let duration = parse_time("751d 1mon 3week 5d 2ns").unwrap();
+        let duration = crate::parse_time("751d 1mon 3week 5d 2ns").unwrap();
         assert_eq!(duration.human_format(), "2y 2mon 2w 3d 2ns");
 
-        let duration = parse_time("    7h    ").unwrap();
+        let duration = crate::parse_time("    7h    ").unwrap();
         assert_eq!(duration.human_format(), "7h");
 
-        let duration = parse_time("    7h  1s  ").unwrap();
+        let duration = crate::parse_time("    7h  1s  ").unwrap();
         assert_eq!(duration.human_format(), "7h 1s");
 
-        let duration = parse_time("    7h  0s  ").unwrap();
+        let duration = crate::parse_time("    7h  0s  ").unwrap();
         assert_eq!(duration.human_format(), "7h");
     }
 }
