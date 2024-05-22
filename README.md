@@ -5,11 +5,19 @@
 [![Docs.rs](https://docs.rs/duration-str/badge.svg)](https://docs.rs/duration-str)
 [![Coverage Status](https://coveralls.io/repos/github/baoyachi/duration-str/badge.svg?branch=master)](https://coveralls.io/github/baoyachi/duration-str?branch=master)
 
-## Support
-The [duration-str](https://crates.io/crates/duration-str) support multiple Duration:
-* https://doc.rust-lang.org/stable/std/time/struct.Duration.html
-* https://docs.rs/chrono/latest/chrono/struct.Duration.html
-* https://docs.rs/time/latest/time/struct.Duration.html#
+
+## Features:
+1. Strong compatibility, accommodating leading or trailing whitespaces in strings.
+2. Integrated with the [serde](https://docs.rs/serde) library.
+3. Supports parsing of various `Duration` types:
+    * https://doc.rust-lang.org/stable/std/time/struct.Duration.html
+    * https://docs.rs/chrono/latest/chrono/struct.Duration.html
+    * https://docs.rs/time/latest/time/struct.Duration.html
+4. Enables formatting of `Duration` into human-readable formats.
+5. Provides precise error localization for easy troubleshooting.
+6. Offers Playground support for online debugging.
+7. Compatible with WebAssembly (wasm).
+8. Adapts to the [humantime](https://docs.rs/humantime/latest/humantime) crate, despite its apparent lack of recent updates...
 
 
 ## Notice ⚠️
