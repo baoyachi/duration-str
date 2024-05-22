@@ -4,7 +4,7 @@ use crate::{
     ONE_MICROSECOND_NANOSECOND, ONE_MILLISECOND_NANOSECOND, ONE_MINUTE_NANOSECOND,
     ONE_MONTH_NANOSECOND, ONE_SECOND_NANOSECOND, ONE_WEEK_NANOSECOND, ONE_YEAR_NANOSECOND,
 };
-use std::fmt::Display;
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use winnow::ascii::multispace0;
 use winnow::combinator::{eof, peek};
@@ -27,6 +27,23 @@ pub(crate) enum TimeUnit {
     MilliSecond,
     MicroSecond,
     NanoSecond,
+}
+
+impl Display for TimeUnit {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TimeUnit::Year => write!(f, "y"),
+            TimeUnit::Month => write!(f, "mon"),
+            TimeUnit::Week => write!(f, "w"),
+            TimeUnit::Day => write!(f, "d"),
+            TimeUnit::Hour => write!(f, "h"),
+            TimeUnit::Minute => write!(f, "min"),
+            TimeUnit::Second => write!(f, "s"),
+            TimeUnit::MilliSecond => write!(f, "ms"),
+            TimeUnit::MicroSecond => write!(f, "µs"),
+            TimeUnit::NanoSecond => write!(f, "ns"),
+        }
+    }
 }
 
 impl TimeUnit {

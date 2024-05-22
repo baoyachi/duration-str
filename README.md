@@ -5,22 +5,33 @@
 [![Docs.rs](https://docs.rs/duration-str/badge.svg)](https://docs.rs/duration-str)
 [![Coverage Status](https://coveralls.io/repos/github/baoyachi/duration-str/badge.svg?branch=master)](https://coveralls.io/github/baoyachi/duration-str?branch=master)
 
-## Support
-The [duration-str](https://crates.io/crates/duration-str) support multiple Duration:
-* https://doc.rust-lang.org/stable/std/time/struct.Duration.html
-* https://docs.rs/chrono/latest/chrono/struct.Duration.html
-* https://docs.rs/time/latest/time/struct.Duration.html#
 
+## Features:
+
+1. Strong compatibility, accommodating leading or trailing whitespaces in strings.
+2. Offers [Playground](https://baoyachi.github.io/duration-str/) support for online debugging.
+3. Integrated with the [serde](https://docs.rs/serde) library.
+4. Supports parsing of various `Duration` types:
+    * https://doc.rust-lang.org/stable/std/time/struct.Duration.html
+    * https://docs.rs/chrono/latest/chrono/struct.Duration.html
+    * https://docs.rs/time/latest/time/struct.Duration.html
+5. Enables formatting of `Duration` into human-readable formats.
+6. Provides precise error localization for easy troubleshooting.
+7. Compatible with WebAssembly (wasm).
+8. Adapts to the [humantime](https://docs.rs/humantime/latest/humantime) crate, despite its apparent lack of recent
+   updates...
 
 ## Notice ⚠️
+
 The default duration unit is second.Also use below **duration unit**
 
 ## Duration Unit List
 
-Parse string to `Duration` . The String duration unit support for one of:`["y","mon","w","d","h","m","s", "ms", "µs", "ns"]`
+Parse string to `Duration` . The String duration unit support for one
+of:`["y","mon","w","d","h","m","s", "ms", "µs", "ns"]`
 
 | unit | Description | unit list option(one of)                                                                           | example |
-| ---- | ----------- |----------------------------------------------------------------------------------------------------| ------- |
+|------|-------------|----------------------------------------------------------------------------------------------------|---------|
 | y    | Year        | ["y" , "year" , "Y" , "YEAR" , "Year"]                                                             | 1y      |
 | mon  | Month       | ["mon" , "MON" , "Month" , "month" , "MONTH"]                                                      | 1mon    |
 | w    | Week        | ["w" , "W" , "Week" ,"WEEK" , "week"]                                                              | 1w      |
@@ -34,8 +45,8 @@ Parse string to `Duration` . The String duration unit support for one of:`["y","
 
 Also,`duration_str` support time duration simple evaluation(+,*). See example:
 
-
 ## example
+
 ```toml
 [dependencies]
 duration-str = "{latest version}" 
@@ -82,6 +93,7 @@ fn main() {
 ```
 
 ## deserialize in struct
+
 deserialize to std::time::Duration
 
 ```rust
@@ -123,7 +135,7 @@ struct Config {
 fn main() {
     let json = r#"{"time_ticker":null,"name":"foo"}"#;
     let config: Config = serde_json::from_str(json).unwrap();
-    
+
     assert_eq!(
         config,
         Config {
@@ -131,7 +143,7 @@ fn main() {
             name: "foo".into()
         }
     );
-    
+
     let json = r#"{"name":"foo"}"#;
     let config: Config = serde_json::from_str(json).unwrap();
     assert_eq!(
@@ -143,6 +155,7 @@ fn main() {
     );
 }
 ```
+
 Also you can use `deserialize_duration_chrono` or `deserialize_duration_time` function
 
 ### E.g:
