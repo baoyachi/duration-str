@@ -1,3 +1,4 @@
+#![doc(html_logo_url = "https://raw.githubusercontent.com/baoyachi/duration-rs/master/duration-str.png")]
 //! Parse string to `Duration` .
 //!
 //! The String value unit support for one of:["y","mon","w","d","h","m","s", "ms", "µs", "ns"]

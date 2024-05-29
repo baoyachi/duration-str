@@ -1,7 +1,20 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use thiserror::Error;
 use winnow::error::{ErrorKind, FromExternalError, ParserError};
 use winnow::stream::Stream;
+
+pub trait RawDebug {
+    fn raw(&self) -> String;
+}
+
+impl<A> RawDebug for A
+where
+    A: AsRef<str>,
+{
+    fn raw(&self) -> String {
+        format!("{}", self.as_ref())
+    }
+}
 
 #[derive(Error, Debug, PartialEq)]
 pub enum DError {
@@ -11,9 +24,11 @@ pub enum DError {
     OverflowError,
 }
 
+const PARTIAL_INPUT_MAX_LEN: usize = 11;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct PError<I> {
-    pub partial_input: I,
+    partial_input: I,
     kind: ErrorKind,
     cause: String,
 }
@@ -30,6 +45,22 @@ impl<I> PError<I> {
     pub fn append_cause<C: AsRef<str>>(mut self, cause: C) -> Self {
         self.cause = cause.as_ref().to_string();
         self
+    }
+
+    pub fn partial_input(&self) -> String
+    where
+        I: RawDebug,
+    {
+        let raw = self.partial_input.raw();
+        if let Some(offset) = raw
+            .char_indices()
+            .enumerate()
+            .find_map(|(pos, (offset, _))| (PARTIAL_INPUT_MAX_LEN <= pos).then_some(offset))
+        {
+            format!("{}...", raw.split_at(offset).0)
+        } else {
+            raw
+        }
     }
 }
 
@@ -64,5 +95,37 @@ where
             write!(f, ", {}", self.cause)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_partial_input() {
+        let error = PError::new("1234567890abcde", ErrorKind::Complete);
+        let partial_input = error.partial_input();
+        assert_eq!(partial_input, "1234567890a...");
+
+        let error = PError::new("你好，龙骧虎步龙行龘龘龘", ErrorKind::Complete);
+        let partial_input = error.partial_input();
+        assert_eq!(partial_input, "你好，龙骧虎步龙行龘龘...");
+
+        let error = PError::new("hello,你好", ErrorKind::Complete);
+        let partial_input = error.partial_input();
+        assert_eq!(partial_input, "hello,你好");
+
+        let error = PError::new("1mins", ErrorKind::Complete);
+        let partial_input = error.partial_input();
+        assert_eq!(partial_input, "1mins");
+
+        let error = PError::new("MILLISECONDhah", ErrorKind::Complete);
+        let partial_input = error.partial_input();
+        assert_eq!(partial_input, "MILLISECOND...");
+
+        let error = PError::new("MILLISECOND", ErrorKind::Complete);
+        let partial_input = error.partial_input();
+        assert_eq!(partial_input, "MILLISECOND");
     }
 }
