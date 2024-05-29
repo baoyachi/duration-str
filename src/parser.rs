@@ -18,7 +18,7 @@ fn opt_cond_unit<'a>(input: &mut &'a str) -> PResult<CondUnit, PError<&'a str>> 
         .parse_next(input)
         .map_err(|err: ErrMode<PError<_>>| {
             err.map(|x| {
-                let partial_input = x.partial_input;
+                let partial_input = x.partial_input();
                 x.append_cause(CondUnit::expect_err(partial_input))
             })
         });

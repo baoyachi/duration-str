@@ -110,7 +110,7 @@ pub(crate) fn unit_abbr1<'a>(input: &mut &'a str) -> PResult<TimeUnit, PError<&'
         .parse_next(input)
         .map_err(|err: ErrMode<PError<_>>| {
             err.map(|x| {
-                let partial_input = x.partial_input;
+                let partial_input = x.partial_input();
                 x.append_cause(TimeUnit::expect_err(partial_input))
             })
         })?;
