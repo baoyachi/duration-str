@@ -12,7 +12,7 @@ where
     A: AsRef<str>,
 {
     fn raw(&self) -> String {
-        format!("{}", self.as_ref())
+        self.as_ref().to_string()
     }
 }
 
