@@ -13,16 +13,16 @@ fn cond_unit1<'a>(input: &mut &'a str) -> PResult<CondUnit, PError<&'a str>> {
 }
 
 fn opt_cond_unit<'a>(input: &mut &'a str) -> PResult<CondUnit, PError<&'a str>> {
-    let multispace = multispace0::<_, PError<_>>;
     let result = cond_unit1
         .parse_next(input)
         .map_err(|err: ErrMode<PError<_>>| {
             err.map(|x| {
-                let partial_input = x.partial_input;
+                let partial_input = x.partial_input();
                 x.append_cause(CondUnit::expect_err(partial_input))
             })
         });
     if result.is_err() {
+        let multispace = multispace0::<_, PError<_>>;
         if (multispace, eof).parse_next(input).is_ok() {
             // The input result is empty except for spaces. Give `TimeUnit` default value
             return Ok(CondUnit::Plus);
