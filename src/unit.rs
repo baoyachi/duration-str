@@ -110,7 +110,7 @@ pub(crate) fn unit_abbr1<'a>(input: &mut &'a str) -> PResult<TimeUnit, PError<&'
         .parse_next(input)
         .map_err(|err: ErrMode<PError<_>>| {
             err.map(|x| {
-                let partial_input = x.partial_input;
+                let partial_input = x.partial_input();
                 x.append_cause(TimeUnit::expect_err(partial_input))
             })
         })?;
@@ -121,9 +121,9 @@ pub(crate) fn unit_abbr1<'a>(input: &mut &'a str) -> PResult<TimeUnit, PError<&'
 }
 
 pub(crate) fn opt_unit_abbr<'a>(input: &mut &'a str) -> PResult<TimeUnit, PError<&'a str>> {
-    let multispace = multispace0::<_, PError<_>>;
     let result = unit_abbr1(input);
     if result.is_err() {
+        let multispace = multispace0::<_, PError<_>>;
         if (multispace, eof).parse_next(input).is_ok() {
             // The input result is empty except for spaces. Give `TimeUnit` default value
             return Ok(TimeUnit::default());
