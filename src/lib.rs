@@ -169,7 +169,7 @@
 //! ```
 
 mod error;
-pub mod ext;
+pub(crate) mod ext;
 pub(crate) mod macros;
 mod parser;
 #[cfg(feature = "serde")]
@@ -192,6 +192,8 @@ use crate::unit::TimeUnit;
 pub use naive_date::{
     after_naive_date, after_naive_date_time, before_naive_date, before_naive_date_time,
 };
+
+pub use ext::*;
 
 pub type DResult<T> = Result<T, DError>;
 
