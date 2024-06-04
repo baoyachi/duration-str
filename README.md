@@ -8,17 +8,17 @@
 
 ## Features:
 
-* 🚀Strong compatibility, accommodating leading or trailing whitespaces in strings.
-* 👍️Offers [Playground](https://baoyachi.github.io/duration-str/) support for online debugging.
-* ⭐Integrated with the [serde](https://docs.rs/serde) library.
-* 🎉Supports parsing of various `Duration` types:
+* 🚀 Strong compatibility, accommodating leading or trailing whitespaces in strings.
+* 👍️ Offers [Playground](https://baoyachi.github.io/duration-str/) support for online debugging.
+* ⭐ Integrated with the [serde](https://docs.rs/serde) library.
+* 🎉 Supports parsing of various `Duration` types:
     * https://doc.rust-lang.org/stable/std/time/struct.Duration.html
     * https://docs.rs/chrono/latest/chrono/struct.Duration.html
     * https://docs.rs/time/latest/time/struct.Duration.html
-* 🔥Enables formatting of `Duration` into human-readable formats.
-* 🍻Provides precise error localization for easy troubleshooting.
-* ⚡ Compatible with WebAssembly (wasm).
-* 🎨Adapts to the [humantime](https://docs.rs/humantime/latest/humantime) crate, despite its apparent lack of recent
+* 🔥 Enables formatting of `Duration` into human-readable formats.
+* 🍻 Provides precise error localization for easy troubleshooting.
+* ⚡  Compatible with WebAssembly (wasm).
+* 🎨 Adapts to the [humantime](https://docs.rs/humantime/latest/humantime) crate, despite its apparent lack of recent
    updates...
 
 ## Notice ⚠️
