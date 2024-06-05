@@ -215,8 +215,10 @@ fn one_second_decimal() -> Decimal {
 const PLUS: &str = "+";
 const STAR: &str = "*";
 
-trait ExpectErr<const LEN: usize> {
-    fn expect_val() -> [&'static str; LEN];
+trait ExpectErr {
+    type Output:Debug;
+
+    fn expect_val() -> Self::Output;
     fn expect_err<S: AsRef<str> + Display>(s: S) -> String;
 }
 
@@ -238,9 +240,11 @@ impl FromStr for CondUnit {
     }
 }
 
-impl ExpectErr<2> for CondUnit {
-    fn expect_val() -> [&'static str; 2] {
-        ["+", "*"]
+impl ExpectErr for CondUnit {
+    type Output = [char; 2];
+
+    fn expect_val() -> Self::Output {
+        ['+', '*']
     }
 
     fn expect_err<S: AsRef<str> + Display>(s: S) -> String {
@@ -254,7 +258,7 @@ impl CondUnit {
     }
 
     fn contain(c: char) -> bool {
-        Self::expect_val().contains(&&*c.to_string())
+        Self::expect_val().contains(&c)
     }
 
     fn change_duration(&self) -> u64 {
