@@ -1,6 +1,6 @@
 [package]
 name = "duration-str"
-version = "0.11.0"
+version = "0.11.1"
 authors = ["baoyachi <liaoymxsdl@gmail.com>"]
 edition = "2021"
 description = "duration string parser"
@@ -25,6 +25,11 @@ winnow = "0.6.8"
 
 [dev-dependencies]
 serde_json = { version = "1.0.87" }
+criterion = "0.3"
+
+[[bench]]
+name = "parser_benchmark"
+harness = false
 
 # docs.rs-specific configuration
 [package.metadata.docs.rs]
