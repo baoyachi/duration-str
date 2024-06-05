@@ -1,4 +1,12 @@
 # parse string to std::time::Duration
+========================================
+<p align="center">
+  <img
+    width="200"
+    src="https://raw.githubusercontent.com/baoyachi/duration-str/master/duration-str.png"
+    alt="duration-str parser"
+  />
+</p>
 
 [![Chrono GitHub Actions](https://github.com/baoyachi/duration-str-rs/actions/workflows/check.yml/badge.svg)](https://github.com/baoyachi/duration-str-rs/actions?query=workflow%3Abuild)
 [![Crates.io](https://img.shields.io/crates/v/duration-str.svg)](https://crates.io/crates/duration-str)

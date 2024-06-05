@@ -1,5 +1,5 @@
 #![doc(
-    html_logo_url = "https://raw.githubusercontent.com/baoyachi/duration-rs/master/duration-str.png"
+    html_logo_url = "https://raw.githubusercontent.com/baoyachi/duration-str/master/duration-str.png"
 )]
 //! Parse string to `Duration` .
 //!
