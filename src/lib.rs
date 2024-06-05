@@ -216,7 +216,7 @@ const PLUS: &str = "+";
 const STAR: &str = "*";
 
 trait ExpectErr {
-    type Output:Debug;
+    type Output: Debug;
 
     fn expect_val() -> Self::Output;
     fn expect_err<S: AsRef<str> + Display>(s: S) -> String;
