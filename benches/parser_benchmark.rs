@@ -12,16 +12,18 @@ fn parse_duration() {
 
 fn impeccable_duration() {
     let input = "2h 37m";
-    (
-        digit1::<_, ContextError>.try_map(str::parse::<usize>),
+    let duration = (
+        digit1::<_, ContextError>.try_map(str::parse::<u64>),
         literal('h').value(3600),
         multispace0,
-        digit1.try_map(str::parse::<usize>),
+        digit1.try_map(str::parse::<u64>),
         literal('m').value(60),
     )
         .map(|(hour, h_unit, _, min, min_unit)| hour * h_unit + min * min_unit)
+        .map(|seconds| Duration::new(seconds, 0))
         .parse(input)
         .unwrap();
+    assert_eq!(duration, Duration::new(9420, 0))
 }
 
 pub fn duration_str_benchmark(c: &mut Criterion) {
