@@ -90,8 +90,10 @@ impl FromStr for TimeUnit {
     }
 }
 
-impl ExpectErr<11> for TimeUnit {
-    fn expect_val() -> [&'static str; 11] {
+impl ExpectErr for TimeUnit {
+    type Output = [&'static str; 11];
+
+    fn expect_val() -> Self::Output {
         ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]
     }
 
