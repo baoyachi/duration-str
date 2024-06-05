@@ -193,7 +193,7 @@ partial_input:mxyz, expect one of :["y", "mon", "w", "d", "h", "m", "s", "ms", "
             r#"
 3ms-2ms
    ^
-partial_input:-2ms, expect one of:["+", "*"], but find:-2ms"#
+partial_input:-2ms, expect one of:['+', '*'], but find:-2ms"#
                 .trim()
         );
     }
