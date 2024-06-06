@@ -1,5 +1,5 @@
 # parse string to std::time::Duration
-========================================
+
 <p align="center">
   <img
     width="200"
