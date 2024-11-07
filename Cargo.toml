@@ -15,7 +15,7 @@ exclude = ["duration-str.png", "./playground"]
 default = ["chrono", "serde", "time"]
 
 [dependencies]
-thiserror = "1.0.37"
+thiserror = "2.0.0"
 chrono = { version = "0.4.38", optional = true, default-features = false, features = ["now"] }
 time = { version = "0.3.17", optional = true, default-features = false }
 
