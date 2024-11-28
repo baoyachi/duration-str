@@ -186,7 +186,7 @@ use rust_decimal::Decimal;
 use std::str::FromStr;
 use std::time::Duration;
 
-use crate::error::DError;
+pub use crate::error::DError;
 use crate::unit::TimeUnit;
 #[cfg(feature = "chrono")]
 pub use naive_date::{
