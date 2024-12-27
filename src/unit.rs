@@ -73,18 +73,17 @@ impl FromStr for TimeUnit {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match &*s.to_lowercase() {
-            "y" | "year" => Ok(TimeUnit::Year),
-            "mon" | "month" => Ok(TimeUnit::Month),
-            "w" | "week" => Ok(TimeUnit::Week),
-            "d" | "day" => Ok(TimeUnit::Day),
-            "h" | "hour" | "hr" => Ok(TimeUnit::Hour),
-            "m" | "min" | "minute" => Ok(TimeUnit::Minute),
-            "s" | "sec" | "second" => Ok(TimeUnit::Second),
-            "ms" | "msec" | "millisecond" => Ok(TimeUnit::MilliSecond),
-            "µs" | "µsec" | "µsecond" | "us" | "usec" | "usecond" | "microsecond" => {
-                Ok(TimeUnit::MicroSecond)
-            }
-            "ns" | "nsec" | "nanosecond" => Ok(TimeUnit::NanoSecond),
+            "y" | "year" | "years" => Ok(TimeUnit::Year),
+            "mon" | "month" | "months" => Ok(TimeUnit::Month),
+            "w" | "week" | "weeks" => Ok(TimeUnit::Week),
+            "d" | "day" | "days" => Ok(TimeUnit::Day),
+            "h" | "hr" | "hour" | "hours" => Ok(TimeUnit::Hour),
+            "m" | "min" | "minute" | "minutes" => Ok(TimeUnit::Minute),
+            "s" | "sec" | "second" | "seconds" => Ok(TimeUnit::Second),
+            "ms" | "msec" | "millisecond" | "milliseconds" => Ok(TimeUnit::MilliSecond),
+            "µs" | "µsec" | "µsecond" | "us" | "usec" | "usecond" | "microsecond"
+            | "microseconds" => Ok(TimeUnit::MicroSecond),
+            "ns" | "nsec" | "nanosecond" | "nanoseconds" => Ok(TimeUnit::NanoSecond),
             _ => Err(DError::ParseError(Self::expect_err(s))),
         }
     }
