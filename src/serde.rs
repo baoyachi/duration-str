@@ -164,6 +164,22 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_deserialize_unit_with_spaces() {
+        #[derive(Debug, Deserialize)]
+        struct Config {
+            #[serde(deserialize_with = "deserialize_duration_time")]
+            time_ticker: TDuration,
+        }
+        let json = r#"{"time_ticker":"1 y + 30"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            config.time_ticker,
+            TDuration::nanoseconds(ONE_YEAR_NANOSECOND as i64) + TDuration::seconds(30)
+        );
+    }
+
     #[cfg(all(feature = "serde", feature = "chrono"))]
     #[test]
     fn test_deserialize_duration_chrono() {
