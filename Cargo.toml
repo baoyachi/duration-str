@@ -21,7 +21,7 @@ time = { version = "0.3.17", optional = true, default-features = false }
 
 serde = { version = "1.0.147", features = ["derive"], optional = true}
 rust_decimal = { version = "1.29.1", default-features = false }
-winnow = "0.6.8"
+winnow = "0.7.1"
 
 [dev-dependencies]
 serde_json = { version = "1.0.87" }
