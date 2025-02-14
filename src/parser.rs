@@ -28,7 +28,7 @@ fn opt_cond_unit<'a>(input: &mut &'a str) -> PResult<CondUnit, PError<&'a str>> 
             return Ok(CondUnit::Plus);
         }
 
-        if peek((multispace, digit1, opt_unit_abbr, multispace))
+        if peek((multispace, digit1, multispace0, opt_unit_abbr, multispace))
             .parse_next(input)
             .is_ok()
         {
@@ -41,8 +41,8 @@ fn opt_cond_unit<'a>(input: &mut &'a str) -> PResult<CondUnit, PError<&'a str>> 
 }
 
 pub(crate) fn parse_expr_time<'a>(input: &mut &'a str) -> PResult<u64, PError<&'a str>> {
-    (multispace0, digit1, opt_unit_abbr, multispace0)
-        .map(|x| (x.1, x.2))
+    (multispace0, digit1, multispace0, opt_unit_abbr, multispace0)
+        .map(|x| (x.1, x.3))
         .try_map(|(v, unit)| unit.duration(v))
         .parse_next(input)
 }
@@ -57,12 +57,13 @@ pub(crate) fn cond_time<'a>(
             opt_cond_unit,
             multispace0,
             digit1,
+            multispace0,
             // Add by default.
             // Parse unit, default is seconds.
             opt_unit_abbr,
             multispace0,
         )
-            .map(|x| (x.3, x.1, x.4)),
+            .map(|x| (x.3, x.1, x.5)),
     )
     .fold(Vec::new, |mut acc: Vec<_>, item| {
         acc.push(item);
@@ -281,6 +282,54 @@ partial_input:10000000000000000y+60, overflow error"#
     fn test_overflow_mul() {
         let err = parse("580y*2").err().unwrap();
         assert_eq!(err, "overflow error");
+    }
+
+    #[test]
+    fn test_parse_optional_spaces() {
+        let duration = parse("1 d").unwrap();
+        assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
+
+        let duration = parse("3 m+31").unwrap(); //the default duration unit is second.
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("3 m + 31").unwrap(); //the default duration unit is second.
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("3 m + 13 s + 29 ms").unwrap();
+        assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
+
+        let duration = parse("3 m + 1 s + 29 ms +17µs").unwrap();
+        assert_eq!(
+            duration,
+            Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+        );
+
+        let duration = parse("1 m*10").unwrap(); //the default duration unit is second.
+        assert_eq!(duration, Duration::new(600, 0));
+
+        let duration = parse("1 m*10 ms").unwrap();
+        assert_eq!(duration, Duration::new(0, 600 * 1000 * 1000));
+
+        let duration = parse("1 m * 1ns").unwrap();
+        assert_eq!(duration, Duration::new(0, 60));
+
+        let duration = parse("1 m * 1 m").unwrap();
+        assert_eq!(duration, Duration::new(3600, 0));
+
+        let duration = parse("3 m + 31").unwrap();
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("3 m  31 s").unwrap();
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("3 m31 s0 ns").unwrap();
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("  3 m 31 s 0 ns ").unwrap();
+        assert_eq!(duration, Duration::new(211, 0));
+
+        let duration = parse("1 d2 h3 min 4s").unwrap();
+        assert_eq!(duration, Duration::new(93784, 0));
     }
 }
 

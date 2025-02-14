@@ -27,11 +27,11 @@ fn impeccable_duration() {
 }
 
 pub fn duration_str_benchmark(c: &mut Criterion) {
-    c.bench_function("duration_str", |b| b.iter(|| parse_duration()));
+    c.bench_function("duration_str", |b| b.iter(parse_duration));
 }
 
 pub fn impeccable_benchmark(c: &mut Criterion) {
-    c.bench_function("impeccable", |b| b.iter(|| impeccable_duration()));
+    c.bench_function("impeccable", |b| b.iter(impeccable_duration));
 }
 
 criterion_group!(benches, duration_str_benchmark, impeccable_benchmark);
