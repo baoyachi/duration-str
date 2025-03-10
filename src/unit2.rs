@@ -1,15 +1,15 @@
-use crate::error::PError;
 use crate::{
-    CondUnit, DError, DResult, ExpectErr, ONE_DAY_NANOSECOND, ONE_HOUR_NANOSECOND,
-    ONE_MICROSECOND_NANOSECOND, ONE_MILLISECOND_NANOSECOND, ONE_MINUTE_NANOSECOND,
-    ONE_MONTH_NANOSECOND, ONE_SECOND_NANOSECOND, ONE_WEEK_NANOSECOND, ONE_YEAR_NANOSECOND,
+    impl_expect_err, impl_expect_err_internal, CondUnit, DError, DResult, ExpectErr,
+    ONE_DAY_NANOSECOND, ONE_HOUR_NANOSECOND, ONE_MICROSECOND_NANOSECOND,
+    ONE_MILLISECOND_NANOSECOND, ONE_MINUTE_NANOSECOND, ONE_MONTH_NANOSECOND, ONE_SECOND_NANOSECOND,
+    ONE_WEEK_NANOSECOND, ONE_YEAR_NANOSECOND,
 };
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use winnow07::ascii::multispace0;
 use winnow07::combinator::{eof, peek};
-use winnow07::error::{ContextError, ErrMode, FromExternalError, ParseError, ParserError};
-use winnow07::stream::{AsChar, Stream};
+use winnow07::error::{ContextError, StrContext, StrContextValue};
+use winnow07::stream::AsChar;
 use winnow07::token::{one_of, take_while};
 use winnow07::Parser;
 use winnow07::Result as WResult;
@@ -89,26 +89,18 @@ impl FromStr for TimeUnit {
     }
 }
 
-impl ExpectErr for TimeUnit {
-    type Output = [&'static str; 11];
-
-    fn expect_val() -> Self::Output {
-        ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]
-    }
-
-    fn expect_err<S: AsRef<str> + Display>(s: S) -> String {
-        format!(
-            "expect one of :{:?} or their longer forms, but find:{}",
-            Self::expect_val(),
-            s,
-        )
-    }
-}
+impl_expect_err!(
+    TimeUnit,
+    [&'static str; 11],
+    ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]
+);
 
 pub(crate) fn unit_abbr1<'a>(input: &mut &'a str) -> WResult<TimeUnit> {
-    let checkpoint = input.checkpoint();
     take_while(1.., |c: char| c.is_alpha() || c == 'µ')
         .parse_to()
+        .context(StrContext::Expected(StrContextValue::Description(
+            TimeUnit::get_expect_val(),
+        )))
         .parse_next(input)
 }
 
@@ -128,7 +120,7 @@ pub(crate) fn opt_unit_abbr<'a>(input: &mut &'a str) -> WResult<TimeUnit> {
             return Ok(TimeUnit::default());
         } else {
             // this result unwrap is safe.
-            return Err(ParserError::from_input(input));
+            return result;
         }
     }
     result
@@ -196,7 +188,7 @@ mod tests {
         let expect_err = r#"
 nys
 ^
-partial_input:nys, expect one of :["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"] or their longer forms, but find:nys"#;
+expected ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]"#;
         assert_eq!(
             catch_err!(unit_abbr1.parse(&Partial::new("nys"))),
             expect_err.trim_start()
@@ -204,7 +196,7 @@ partial_input:nys, expect one of :["y", "mon", "w", "d", "h", "m", "s", "ms", "�
 
         let expect_err = r#"
 ^
-partial_input:, expect one of :["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"] or their longer forms, but find:"#;
+expected ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]"#;
         assert_eq!(catch_err!(unit_abbr1.parse(&Partial::new(""))), expect_err);
     }
 
@@ -267,7 +259,7 @@ partial_input:, expect one of :["y", "mon", "w", "d", "h", "m", "s", "ms", "µs"
         let expect_err = r#"
 nys
 ^
-partial_input:nys, expect one of :["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"] or their longer forms, but find:nys"#;
+expected ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]"#;
         assert_eq!(
             catch_err!(opt_unit_abbr.parse(&Partial::new("nys"))),
             expect_err.trim_start()
