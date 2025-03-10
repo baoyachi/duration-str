@@ -220,7 +220,55 @@ trait ExpectErr {
     type Output: Debug;
 
     fn expect_val() -> Self::Output;
+
+    fn get_expect_val() -> &'static str;
     fn expect_err<S: AsRef<str> + Display>(s: S) -> String;
+}
+
+#[macro_export]
+macro_rules! impl_expect_err {
+    ($type:ty, $output:ty, [$($val:tt),* $(,)?]) => {
+        impl ExpectErr for $type {
+            type Output = $output;
+
+            fn expect_val() -> Self::Output {
+                [$($val),*]
+            }
+
+            fn expect_err<S: AsRef<str> + Display>(s: S) -> String {
+                format!("expect one of:{:?}, but find:{}", Self::expect_val(), s)
+            }
+
+            fn get_expect_val() -> &'static str {
+                static EXPECT_VAL_STR: &str = concat!(
+                    "[",
+                    impl_expect_err_internal!($($val),*),
+                    "]"
+                );
+                EXPECT_VAL_STR
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_expect_err_internal {
+    // match empty
+    () => {
+        ""
+    };
+    // match single type
+    ($first:expr) => {
+        stringify!($first)
+    };
+    // match multi type
+    ($first:expr, $($rest:expr),*) => {
+        concat!(
+            stringify!($first),
+            ", ",
+            impl_expect_err_internal!($($rest),*)
+        )
+    };
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -241,17 +289,7 @@ impl FromStr for CondUnit {
     }
 }
 
-impl ExpectErr for CondUnit {
-    type Output = [char; 2];
-
-    fn expect_val() -> Self::Output {
-        ['+', '*']
-    }
-
-    fn expect_err<S: AsRef<str> + Display>(s: S) -> String {
-        format!("expect one of:{:?}, but find:{}", Self::expect_val(), s)
-    }
-}
+impl_expect_err!(CondUnit, [char; 2], ['+', '*']);
 
 impl CondUnit {
     fn init() -> (Self, u64) {

@@ -96,6 +96,10 @@ impl ExpectErr for TimeUnit {
         ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]
     }
 
+    fn get_expect_val() -> &'static str {
+        "todo!()"
+    }
+
     fn expect_err<S: AsRef<str> + Display>(s: S) -> String {
         format!(
             "expect one of :{:?} or their longer forms, but find:{}",
