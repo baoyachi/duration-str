@@ -1,55 +1,55 @@
-use crate::error::PError;
-use crate::unit::opt_unit_abbr;
-use crate::{Calc, CondUnit, ExpectErr, TimeUnit};
+use crate::unit::{opt_unit_abbr, TimeUnit};
+use crate::{Calc, CondUnit, ExpectErr};
 use std::time::Duration;
 use winnow::ascii::{digit1, multispace0};
-use winnow::combinator::{alt, eof, opt, peek, repeat};
-use winnow::error::ErrMode;
-use winnow::PResult;
+use winnow::combinator::trace;
+use winnow::combinator::{alt, cut_err};
+use winnow::combinator::{eof, peek, repeat};
+use winnow::error::{StrContext, StrContextValue};
+use winnow::ModalResult as WResult;
 use winnow::Parser;
 
-fn cond_unit1<'a>(input: &mut &'a str) -> PResult<CondUnit, PError<&'a str>> {
-    alt(('+'.value(CondUnit::Plus), '*'.value(CondUnit::Star))).parse_next(input)
+pub(crate) fn cond_unit1(input: &mut &str) -> WResult<CondUnit> {
+    alt(('+'.value(CondUnit::Plus), '*'.value(CondUnit::Star)))
+        .context(StrContext::Expected(StrContextValue::Description(
+            CondUnit::get_expect_val(),
+        )))
+        .parse_next(input)
 }
 
-fn opt_cond_unit<'a>(input: &mut &'a str) -> PResult<CondUnit, PError<&'a str>> {
-    let result = cond_unit1
-        .parse_next(input)
-        .map_err(|err: ErrMode<PError<_>>| {
-            err.map(|x| {
-                let partial_input = x.partial_input();
-                x.append_cause(CondUnit::expect_err(partial_input))
-            })
-        });
+fn opt_cond_unit(input: &mut &str) -> WResult<CondUnit> {
+    let result = cond_unit1.parse_next(input);
     if result.is_err() {
-        let multispace = multispace0::<_, PError<_>>;
+        let multispace = multispace0::<_, _>;
         if (multispace, eof).parse_next(input).is_ok() {
             // The input result is empty except for spaces. Give `TimeUnit` default value
             return Ok(CondUnit::Plus);
         }
 
-        if peek((multispace, digit1, multispace0, opt_unit_abbr, multispace))
-            .parse_next(input)
-            .is_ok()
-        {
-            return Ok(CondUnit::Plus);
-        } else {
-            return Err(result.err().unwrap().cut());
-        }
+        return cut_err(peek((
+            multispace,
+            digit1,
+            multispace0,
+            opt_unit_abbr,
+            multispace,
+        )))
+        .context(StrContext::Expected(StrContextValue::Description(
+            CondUnit::get_expect_val(),
+        )))
+        .value(CondUnit::Plus)
+        .parse_next(input);
     }
     result
 }
 
-pub(crate) fn parse_expr_time<'a>(input: &mut &'a str) -> PResult<u64, PError<&'a str>> {
+pub(crate) fn parse_expr_time(input: &mut &str) -> WResult<u64> {
     (multispace0, digit1, multispace0, opt_unit_abbr, multispace0)
         .map(|x| (x.1, x.3))
         .try_map(|(v, unit)| unit.duration(v))
         .parse_next(input)
 }
 
-pub(crate) fn cond_time<'a>(
-    input: &mut &'a str,
-) -> PResult<Vec<(&'a str, CondUnit, TimeUnit)>, PError<&'a str>> {
+pub(crate) fn cond_time<'a>(input: &mut &'a str) -> WResult<Vec<(&'a str, CondUnit, TimeUnit)>> {
     repeat(
         0..,
         (
@@ -74,14 +74,16 @@ pub(crate) fn cond_time<'a>(
 
 pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
     let input = input.as_ref();
-    let (unit_time, cond_opt) = (parse_expr_time, opt(cond_time))
+    let (unit_time, cond_val) = (parse_expr_time, trace("cond_time", cond_time))
         .parse(input)
         .map_err(|e| format!("{}", e))?;
 
-    let (init_cond, init_duration) = cond_opt
-        .map(|val| val.calc())
-        .unwrap_or_else(|| Ok(CondUnit::init()))
-        .map_err(|err| err.to_string())?;
+    let (init_cond, init_duration) = if cond_val.is_empty() {
+        CondUnit::init()
+    } else {
+        cond_val.calc().map_err(|err| err.to_string())?
+    };
+
     let duration = init_cond
         .calc(unit_time, init_duration)
         .map_err(|err| err.to_string())?;
@@ -92,7 +94,7 @@ pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
 #[allow(clippy::identity_op)]
 mod tests {
     use super::*;
-    use crate::{catch_err, CondUnit, TimeUnit};
+    use crate::{catch_err, unit::TimeUnit, CondUnit};
 
     #[test]
     fn test_parse_expr_time() {
@@ -180,21 +182,25 @@ mod tests {
             r#"
 0m+3-5
     ^
-partial_input:-5, expect one of :["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"] or their longer forms, but find:-5"#
+expected ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]"#
                 .trim()
         );
 
-        assert_eq!(catch_err!(parse("0mxyz")), r#"
+        assert_eq!(
+            catch_err!(parse("0mxyz")),
+            r#"
 0mxyz
  ^
-partial_input:mxyz, expect one of :["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"] or their longer forms, but find:mxyz"#.trim());
+expected ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]"#
+                .trim()
+        );
 
         assert_eq!(
             catch_err!(parse("3ms-2ms")),
             r#"
 3ms-2ms
    ^
-partial_input:-2ms, expect one of:['+', '*'], but find:-2ms"#
+expected ['+', '*']"#
                 .trim()
         );
     }
@@ -263,7 +269,7 @@ partial_input:-2ms, expect one of:['+', '*'], but find:-2ms"#
             r#"
 10000000000000000y+60
 ^
-partial_input:10000000000000000y+60, overflow error"#
+overflow error"#
                 .trim()
                 .to_string()
         );
