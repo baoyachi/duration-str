@@ -73,7 +73,15 @@ impl FromStr for TimeUnit {
 
     #[inline(always)]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_ref() {
+        let owned;
+        let case = if cfg!(feature = "lowercase") {
+            s
+        } else {
+            owned = s.to_ascii_lowercase();
+            owned.as_str()
+        };
+
+        match case {
             "y" | "year" | "years" => Ok(TimeUnit::Year),
             "mon" | "month" | "months" => Ok(TimeUnit::Month),
             "w" | "week" | "weeks" => Ok(TimeUnit::Week),
