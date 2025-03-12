@@ -5,7 +5,7 @@ use winnow::ascii::{digit1, multispace0};
 use winnow::combinator::trace;
 use winnow::combinator::{alt, cut_err};
 use winnow::combinator::{eof, peek, repeat};
-use winnow::error::{StrContext, StrContextValue};
+use winnow::error::{ContextError, StrContext, StrContextValue};
 use winnow::ModalResult as WResult;
 use winnow::Parser;
 
@@ -20,24 +20,18 @@ pub(crate) fn cond_unit1(input: &mut &str) -> WResult<CondUnit> {
 fn opt_cond_unit(input: &mut &str) -> WResult<CondUnit> {
     let result = cond_unit1.parse_next(input);
     if result.is_err() {
-        let multispace = multispace0::<_, _>;
-        if (multispace, eof).parse_next(input).is_ok() {
+        multispace0.parse_next(input)?;
+        if eof::<_, ContextError>.parse_next(input).is_ok() {
             // The input result is empty except for spaces. Give `TimeUnit` default value
             return Ok(CondUnit::Plus);
         }
 
-        return cut_err(peek((
-            multispace,
-            digit1,
-            multispace0,
-            opt_unit_abbr,
-            multispace,
-        )))
-        .context(StrContext::Expected(StrContextValue::Description(
-            CondUnit::get_expect_val(),
-        )))
-        .value(CondUnit::Plus)
-        .parse_next(input);
+        return cut_err(peek((digit1, multispace0, opt_unit_abbr)))
+            .context(StrContext::Expected(StrContextValue::Description(
+                CondUnit::get_expect_val(),
+            )))
+            .value(CondUnit::Plus)
+            .parse_next(input);
     }
     result
 }

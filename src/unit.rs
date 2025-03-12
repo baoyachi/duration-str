@@ -8,7 +8,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use winnow::ascii::multispace0;
 use winnow::combinator::{cut_err, eof, peek};
-use winnow::error::{StrContext, StrContextValue};
+use winnow::error::{ContextError, StrContext, StrContextValue};
 use winnow::stream::AsChar;
 use winnow::token::{one_of, take_while};
 use winnow::ModalResult as WResult;
@@ -116,13 +116,13 @@ pub(crate) fn unit_abbr1(input: &mut &str) -> WResult<TimeUnit> {
 pub(crate) fn opt_unit_abbr(input: &mut &str) -> WResult<TimeUnit> {
     let result = unit_abbr1(input);
     if result.is_err() {
-        let multispace = multispace0::<_, _>;
-        if (multispace, eof).parse_next(input).is_ok() {
+        multispace0.parse_next(input)?;
+        if eof::<_, ContextError>.parse_next(input).is_ok() {
             // The input result is empty except for spaces. Give `TimeUnit` default value
             return Ok(TimeUnit::default());
         }
 
-        return cut_err(peek((multispace, one_of(CondUnit::contain))))
+        return cut_err(peek(one_of(CondUnit::contain)))
             .context(StrContext::Expected(StrContextValue::Description(
                 TimeUnit::get_expect_val(),
             )))
