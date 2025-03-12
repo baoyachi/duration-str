@@ -1,6 +1,6 @@
 [package]
 name = "duration-str"
-version = "0.15.0"
+version = "0.16.0"
 authors = ["baoyachi <liaoymxsdl@gmail.com>"]
 edition = "2021"
 description = "duration string parser"
@@ -15,6 +15,7 @@ exclude = ["duration-str.png", "./playground"]
 default = ["chrono", "serde", "time"]
 
 lowercase = []
+no_calc = []
 
 [dependencies]
 thiserror = "2.0.0"
@@ -32,7 +33,7 @@ criterion = "0.5"
 [[bench]]
 name = "parser_benchmark"
 harness = false
-required-features = ["lowercase"]
+required-features = ["lowercase", "no_calc"]
 
 # docs.rs-specific configuration
 [package.metadata.docs.rs]
@@ -50,3 +51,8 @@ required-features = ["chrono", "serde"]
 [[example]]
 name = "deserialize_duration_time"
 required-features = ["time", "serde"]
+
+[[example]]
+name = "no_calc"
+required-features = ["no_calc"]
+

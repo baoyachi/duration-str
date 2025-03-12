@@ -2,7 +2,6 @@ use crate::unit::{opt_unit_abbr, TimeUnit};
 use crate::{Calc, CondUnit, ExpectErr};
 use std::time::Duration;
 use winnow::ascii::{digit1, multispace0};
-use winnow::combinator::trace;
 use winnow::combinator::{alt, cut_err};
 use winnow::combinator::{eof, peek, repeat};
 use winnow::error::{ContextError, StrContext, StrContextValue};
@@ -68,20 +67,38 @@ pub(crate) fn cond_time<'a>(input: &mut &'a str) -> WResult<Vec<(&'a str, CondUn
 
 pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
     let input = input.as_ref();
-    let (unit_time, cond_val) = (parse_expr_time, trace("cond_time", cond_time))
-        .parse(input)
-        .map_err(|e| format!("{}", e))?;
 
-    let (init_cond, init_duration) = if cond_val.is_empty() {
-        CondUnit::init()
-    } else {
-        cond_val.calc().map_err(|err| err.to_string())?
-    };
+    #[cfg(feature = "no_calc")]
+    {
+        use crate::DError;
 
-    let duration = init_cond
-        .calc(unit_time, init_duration)
-        .map_err(|err| err.to_string())?;
-    Ok(duration)
+        let d = repeat(0.., parse_expr_time)
+            .try_fold(Default::default, |mut acc: u64, item| -> Result<_, DError> {
+                acc = acc.checked_add(item).ok_or(DError::OverflowError)?;
+                Ok(acc)
+            })
+            .parse(input)
+            .map_err(|err| err.to_string())?;
+        Ok(Duration::from_nanos(d))
+    }
+
+    #[cfg(not(feature = "no_calc"))]
+    {
+        let (unit_time, cond_val) = (parse_expr_time, cond_time)
+            .parse(input)
+            .map_err(|e| format!("{}", e))?;
+
+        let (init_cond, init_duration) = if cond_val.is_empty() {
+            CondUnit::init()
+        } else {
+            cond_val.calc().map_err(|err| err.to_string())?
+        };
+
+        let duration = init_cond
+            .calc(unit_time, init_duration)
+            .map_err(|err| err.to_string())?;
+        Ok(duration)
+    }
 }
 
 #[cfg(test)]
