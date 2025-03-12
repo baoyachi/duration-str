@@ -29,6 +29,11 @@
 * 🎨 Adapts to the [humantime](https://docs.rs/humantime/latest/humantime) crate, despite its apparent lack of recent
    updates...
 
+## Performance
+Suggestion: It is recommended to enable the `lowercase` feature to improve performance:  
+* Default: Calls `to_lowercase()` each time, designed for compatibility, suitable for flexible input but with lower performance.  
+* `lowercase` feature: Skips the conversion, ideal for lowercase input scenarios, offering better performance."
+
 ## Notice ⚠️
 
 The default duration unit is second.Also use below **duration unit**
