@@ -73,10 +73,13 @@ pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
         use crate::DError;
 
         let d = repeat(0.., parse_expr_time)
-            .try_fold(Default::default, |mut acc: u64, item| -> Result<_, DError> {
-                acc = acc.checked_add(item).ok_or(DError::OverflowError)?;
-                Ok(acc)
-            })
+            .try_fold(
+                Default::default,
+                |mut acc: u64, item| -> Result<_, DError> {
+                    acc = acc.checked_add(item).ok_or(DError::OverflowError)?;
+                    Ok(acc)
+                },
+            )
             .parse(input)
             .map_err(|err| err.to_string())?;
         Ok(Duration::from_nanos(d))
