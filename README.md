@@ -33,6 +33,9 @@
 Suggestion: It is recommended to enable the `lowercase` feature to improve performance:  
 * Default: Calls `to_lowercase()` each time, designed for compatibility, suitable for flexible input but with lower performance.  
 * `lowercase` feature: Skips the conversion, ideal for lowercase input scenarios, offering better performance."
+* `no_calc` feature: When enabled, the parse function only parses and sums expression values without complex logic, ideal for high-performance scenarios not requiring intricate calculations.
+
+
 
 ## Notice ⚠️
 
