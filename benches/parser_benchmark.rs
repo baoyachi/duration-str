@@ -1,3 +1,5 @@
+// use: cargo bench --features lowercase
+
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::time::Duration;
 use winnow::ascii::{digit1, multispace0};
