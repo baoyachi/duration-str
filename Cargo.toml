@@ -1,6 +1,6 @@
 [package]
 name = "duration-str"
-version = "0.15.1"
+version = "0.16.0"
 authors = ["baoyachi <liaoymxsdl@gmail.com>"]
 edition = "2021"
 description = "duration string parser"
@@ -12,16 +12,18 @@ license = "Apache-2.0"
 exclude = ["duration-str.png", "./playground"]
 
 [features]
-default = ["chrono", "serde", "time"]
+default = ["chrono", "serde", "time", "calc"]
 
 lowercase = []
+no_calc = []
+calc = []
 
 [dependencies]
 thiserror = "2.0.0"
 chrono = { version = "0.4.38", optional = true, default-features = false, features = ["now"] }
 time = { version = "0.3.17", optional = true, default-features = false }
 
-serde = { version = "1.0.147", features = ["derive"], optional = true}
+serde = { version = "1.0.147", features = ["derive"], optional = true }
 rust_decimal = { version = "1.29.1", default-features = false }
 winnow = "0.7.3"
 
@@ -32,7 +34,7 @@ criterion = "0.5"
 [[bench]]
 name = "parser_benchmark"
 harness = false
-required-features = ["lowercase"]
+required-features = ["lowercase", "no_calc"]
 
 # docs.rs-specific configuration
 [package.metadata.docs.rs]
@@ -50,3 +52,8 @@ required-features = ["chrono", "serde"]
 [[example]]
 name = "deserialize_duration_time"
 required-features = ["time", "serde"]
+
+[[example]]
+name = "no_calc"
+required-features = ["no_calc"]
+

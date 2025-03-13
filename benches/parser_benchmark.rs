@@ -1,4 +1,4 @@
-// use: cargo bench --features lowercase
+// use: cargo bench --features "lowercase no_calc"
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use std::time::Duration;

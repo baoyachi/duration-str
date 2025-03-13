@@ -77,13 +77,15 @@ jobs:
       - name: Run tests
         run: cargo test  --all-features --all
       - name: Run tests without default features.
-        run: cargo test --no-default-features
+        run: cargo test --no-default-features --features="calc"
       - name: Run examples with deserialize_duration
         run: cargo run --example deserialize_duration
       - name: Run examples with deserialize_duration_chrono
         run: cargo run --example deserialize_duration_chrono
       - name: Run examples with deserialize_duration_time
         run: cargo run --example deserialize_duration_time
+      - name: Run examples with no_calc
+        run: cargo run --example no_calc --features="no_calc"
       - name: Coverage
         if: matrix.rust == 'stable'
         run: cargo tarpaulin -o Lcov --output-dir ./coverage
