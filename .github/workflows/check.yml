@@ -77,7 +77,7 @@ jobs:
       - name: Run tests
         run: cargo test  --all-features --all
       - name: Run tests without default features.
-        run: cargo test --no-default-features
+        run: cargo test --no-default-features --features="calc"
       - name: Run examples with deserialize_duration
         run: cargo run --example deserialize_duration
       - name: Run examples with deserialize_duration_chrono
