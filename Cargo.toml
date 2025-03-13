@@ -12,17 +12,18 @@ license = "Apache-2.0"
 exclude = ["duration-str.png", "./playground"]
 
 [features]
-default = ["chrono", "serde", "time"]
+default = ["chrono", "serde", "time", "calc"]
 
 lowercase = []
 no_calc = []
+calc = []
 
 [dependencies]
 thiserror = "2.0.0"
 chrono = { version = "0.4.38", optional = true, default-features = false, features = ["now"] }
 time = { version = "0.3.17", optional = true, default-features = false }
 
-serde = { version = "1.0.147", features = ["derive"], optional = true}
+serde = { version = "1.0.147", features = ["derive"], optional = true }
 rust_decimal = { version = "1.29.1", default-features = false }
 winnow = "0.7.3"
 

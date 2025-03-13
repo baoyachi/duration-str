@@ -67,8 +67,10 @@ pub(crate) fn cond_time<'a>(input: &mut &'a str) -> WResult<Vec<(&'a str, CondUn
 
 pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
     let input = input.as_ref();
-
-    #[cfg(feature = "no_calc")]
+    if input.is_empty() {
+        return Err(String::from("Empty input"));
+    }
+    #[cfg(all(feature = "no_calc", not(feature = "calc")))]
     {
         use crate::DError;
 
@@ -82,10 +84,10 @@ pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
             )
             .parse(input)
             .map_err(|err| err.to_string())?;
-        Ok(Duration::from_nanos(d))
+        return Ok(Duration::from_nanos(d));
     }
 
-    #[cfg(not(feature = "no_calc"))]
+    #[cfg(feature = "calc")]
     {
         let (unit_time, cond_val) = (parse_expr_time, cond_time)
             .parse(input)
@@ -217,6 +219,8 @@ expected ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]"#
 expected ['+', '*']"#
                 .trim()
         );
+
+        assert_eq!(catch_err!(parse("")), "Empty input");
     }
 
     #[test]
