@@ -119,7 +119,12 @@ jobs:
         run: |
           rustup update stable
           cargo +stable install wasm-pack
-          apt install -y tree
+
+      - name: Install tree
+        run: sudo apt-get update && sudo apt-get install -y tree
+
+      - name: Run tree command
+        run: tree
 
       - name: Build WebAssembly module with wasm-pack
         run: wasm-pack build --target bundler --out-dir ../site/pkg --release
