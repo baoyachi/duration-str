@@ -146,4 +146,4 @@ jobs:
       - name: Publish
         shell: bash
         run: |
-           cargo publish --token ${{ secrets.CRATES_IO_API_TOKEN }}
+          cargo publish --token ${{ secrets.CRATES_GITHUB_TOKEN }}
