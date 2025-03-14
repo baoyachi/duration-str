@@ -120,12 +120,6 @@ jobs:
           rustup update stable
           cargo +stable install wasm-pack
 
-      - name: Install tree
-        run: sudo apt-get update && sudo apt-get install -y tree
-
-      - name: Run tree command
-        run: tree
-
       - name: Build WebAssembly module with wasm-pack
         run: wasm-pack build --target bundler --out-dir ../site/pkg --release
         working-directory: ./playground/wasm
@@ -134,12 +128,12 @@ jobs:
         run: pnpm install && pnpm run build
         working-directory: ./playground/site
 
-#      - name: Deploy to GitHub Pages
-#        uses: peaceiris/actions-gh-pages@v4
-#        if: ${{ github.ref == 'refs/heads/master' }}
-#        with:
-#          personal_token: ${{ secrets.GITHUB_TOKEN }}
-#          publish_dir: ./playground/site/dist
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          personal_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./playground/site/dist
 
   publish-crate:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -152,7 +146,4 @@ jobs:
       - name: Publish
         shell: bash
         run: |
-          cd ./playground/
-          tree -L 2
-          # Uncomment the following line to publish the crate
-          # cargo publish --token ${{ secrets.CRATES_IO_API_TOKEN }}
+           cargo publish --token ${{ secrets.CRATES_IO_API_TOKEN }}
