@@ -47,6 +47,15 @@ impl Display for TimeUnit {
 }
 
 impl TimeUnit {
+    #[inline]
+    #[cfg(feature = "cn_unit")]
+    fn is_cn_unit(c: char) -> bool {
+        [
+            '年', '月', '周', '日', '天', '时', '分', '秒', '毫', '微', '纳',
+        ]
+        .contains(&c)
+    }
+
     pub(crate) fn duration(&self, time_str: impl AsRef<str>) -> DResult<u64> {
         let time = time_str
             .as_ref()
@@ -93,7 +102,28 @@ impl FromStr for TimeUnit {
             "µs" | "µsec" | "µsecond" | "us" | "usec" | "usecond" | "microsecond"
             | "microseconds" => Ok(TimeUnit::MicroSecond),
             "ns" | "nsec" | "nanosecond" | "nanoseconds" => Ok(TimeUnit::NanoSecond),
-            _ => Err(DError::ParseError(Self::expect_err(s))),
+
+            #[cfg(feature = "cn_unit")]
+            "年" => Ok(TimeUnit::Year),
+            #[cfg(feature = "cn_unit")]
+            "月" => Ok(TimeUnit::Month),
+            #[cfg(feature = "cn_unit")]
+            "周" => Ok(TimeUnit::Week),
+            #[cfg(feature = "cn_unit")]
+            "日" | "天" => Ok(TimeUnit::Day),
+            #[cfg(feature = "cn_unit")]
+            "时" => Ok(TimeUnit::Hour),
+            #[cfg(feature = "cn_unit")]
+            "分" => Ok(TimeUnit::Minute),
+            #[cfg(feature = "cn_unit")]
+            "秒" => Ok(TimeUnit::Second),
+            #[cfg(feature = "cn_unit")]
+            "毫秒" => Ok(TimeUnit::MilliSecond),
+            #[cfg(feature = "cn_unit")]
+            "微秒" => Ok(TimeUnit::MicroSecond),
+            #[cfg(feature = "cn_unit")]
+            "纳秒" => Ok(TimeUnit::NanoSecond),
+            _ => Err(DError::ParseError(Self::expect_err(case))),
         }
     }
 }
@@ -105,7 +135,17 @@ impl_expect_err!(
 );
 
 pub(crate) fn unit_abbr1(input: &mut &str) -> WResult<TimeUnit> {
-    take_while(1.., |c: char| c.is_alpha() || c == 'µ')
+    let set = |c: char| c.is_alpha() || c == 'µ';
+    let set = {
+        #[cfg(feature = "cn_unit")]
+        {
+            move |c: char| set(c) || TimeUnit::is_cn_unit(c)
+        }
+        #[cfg(not(feature = "cn_unit"))]
+        set
+    };
+
+    take_while(1.., set)
         .parse_to()
         .context(StrContext::Expected(StrContextValue::Description(
             TimeUnit::get_expect_val(),
@@ -178,6 +218,55 @@ mod tests {
         );
         assert_eq!(
             unit_abbr1.parse_peek(&Partial::new("ns")),
+            Ok(("", TimeUnit::NanoSecond))
+        );
+    }
+
+    #[cfg(feature = "cn_unit")]
+    #[test]
+    fn test_time_cn_unit_abbr() {
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("年")),
+            Ok(("", TimeUnit::Year))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("月")),
+            Ok(("", TimeUnit::Month))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("周")),
+            Ok(("", TimeUnit::Week))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("日")),
+            Ok(("", TimeUnit::Day))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("天")),
+            Ok(("", TimeUnit::Day))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("时")),
+            Ok(("", TimeUnit::Hour))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("分")),
+            Ok(("", TimeUnit::Minute))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("秒")),
+            Ok(("", TimeUnit::Second))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("毫秒")),
+            Ok(("", TimeUnit::MilliSecond))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("微秒")),
+            Ok(("", TimeUnit::MicroSecond))
+        );
+        assert_eq!(
+            unit_abbr1.parse_peek(&Partial::new("纳秒")),
             Ok(("", TimeUnit::NanoSecond))
         );
     }
