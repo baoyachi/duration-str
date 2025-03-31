@@ -191,6 +191,58 @@ mod tests {
         assert_eq!(duration, Duration::new(144, 0))
     }
 
+    #[cfg(feature = "cn_unit")]
+    #[test]
+    fn test_parse_unit_cn() {
+        let duration = parse("1年").unwrap();
+        assert_eq!(duration, Duration::new(31536000, 0));
+
+        let duration = parse("1月").unwrap();
+        assert_eq!(duration, Duration::new(2592000, 0));
+
+        let duration = parse("1周").unwrap();
+        assert_eq!(duration, Duration::new(604800, 0));
+
+        let duration = parse("1日").unwrap();
+        assert_eq!(duration, Duration::new(86400, 0));
+
+        let duration = parse("1天").unwrap();
+        assert_eq!(duration, Duration::new(86400, 0));
+
+        let duration = parse("1时").unwrap();
+        assert_eq!(duration, Duration::new(3600, 0));
+
+        let duration = parse("1分").unwrap();
+        assert_eq!(duration, Duration::new(60, 0));
+
+        let duration = parse("1秒").unwrap();
+        assert_eq!(duration, Duration::new(1, 0));
+
+        let duration = parse("1毫秒").unwrap();
+        assert_eq!(duration, Duration::new(0, 1 * 1000 * 1000));
+
+        let duration = parse("1微秒").unwrap();
+        assert_eq!(duration, Duration::new(0, 1 * 1000));
+
+        let duration = parse("1纳秒").unwrap();
+        assert_eq!(duration, Duration::new(0, 1));
+
+        let duration = parse("1年 2日").unwrap();
+        assert_eq!(duration, Duration::new(31708800, 0));
+
+        let duration = parse("1分31秒").unwrap();
+        assert_eq!(duration, Duration::new(91, 0));
+
+        let duration = parse("1分+31秒").unwrap();
+        assert_eq!(duration, Duration::new(91, 0));
+
+        let duration = parse("1分+31秒+2毫秒+3纳秒").unwrap();
+        assert_eq!(duration, Duration::new(91, 2 * 1000 * 1000 + 3));
+
+        let duration = parse(" 1分+   31秒 + 2毫秒+  3纳秒  ").unwrap();
+        assert_eq!(duration, Duration::new(91, 2 * 1000 * 1000 + 3));
+    }
+
     #[test]
     fn test_duration_err() {
         assert_eq!(

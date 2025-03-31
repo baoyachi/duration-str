@@ -1,6 +1,6 @@
 [package]
 name = "duration-str"
-version = "0.16.1"
+version = "0.17.0"
 authors = ["baoyachi <liaoymxsdl@gmail.com>"]
 edition = "2021"
 description = "duration string parser"
@@ -17,6 +17,7 @@ default = ["chrono", "serde", "time", "calc"]
 lowercase = []
 no_calc = []
 calc = []
+cn_unit = []
 
 [dependencies]
 thiserror = "2.0.0"
@@ -25,7 +26,7 @@ time = { version = "0.3.17", optional = true, default-features = false }
 
 serde = { version = "1.0.147", features = ["derive"], optional = true }
 rust_decimal = { version = "1.29.1", default-features = false }
-winnow = "0.7.3"
+winnow = "0.7.4"
 
 [dev-dependencies]
 serde_json = { version = "1.0.87" }
