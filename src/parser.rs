@@ -70,7 +70,7 @@ pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
     if input.is_empty() {
         return Err(String::from("Empty input"));
     }
-    #[cfg(all(feature = "no_calc", not(feature = "calc")))]
+    #[cfg(feature = "no_calc")]
     {
         use crate::DError;
 
@@ -87,7 +87,7 @@ pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
         return Ok(Duration::from_nanos(d));
     }
 
-    #[cfg(feature = "calc")]
+    #[cfg(not(feature = "no_calc"))]
     {
         let (unit_time, cond_val) = (parse_expr_time, cond_time)
             .parse(input)
