@@ -12,11 +12,10 @@ license = "Apache-2.0"
 exclude = ["duration-str.png", "./playground"]
 
 [features]
-default = ["chrono", "serde", "time", "calc"]
+default = ["chrono", "serde", "time"]
 
 lowercase = []
 no_calc = []
-calc = []
 cn_unit = []
 
 [dependencies]
