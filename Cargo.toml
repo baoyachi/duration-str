@@ -30,7 +30,7 @@ winnow = "0.7.4"
 
 [dev-dependencies]
 serde_json = { version = "1.0.87" }
-criterion = "0.6"
+criterion = "0.8"
 
 [[bench]]
 name = "parser_benchmark"
