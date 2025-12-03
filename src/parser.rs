@@ -70,7 +70,8 @@ pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
     if input.is_empty() {
         return Err(String::from("Empty input"));
     }
-    #[cfg(all(feature = "no_calc", not(feature = "calc")))]
+
+    #[cfg(feature = "no_calc")]
     {
         use crate::DError;
 
@@ -84,10 +85,10 @@ pub fn parse(input: impl AsRef<str>) -> Result<Duration, String> {
             )
             .parse(input)
             .map_err(|err| err.to_string())?;
-        return Ok(Duration::from_nanos(d));
+        Ok(Duration::from_nanos(d))
     }
 
-    #[cfg(feature = "calc")]
+    #[cfg(not(feature = "no_calc"))]
     {
         let (unit_time, cond_val) = (parse_expr_time, cond_time)
             .parse(input)
@@ -166,29 +167,31 @@ mod tests {
         let duration = parse("1hr").unwrap();
         assert_eq!(duration, Duration::new(3600, 0));
 
-        let duration = parse("1m+31").unwrap();
-        assert_eq!(duration, Duration::new(91, 0));
-
         let duration = parse("1m31").unwrap();
         assert_eq!(duration, Duration::new(91, 0));
 
         let duration = parse("1m31s").unwrap();
         assert_eq!(duration, Duration::new(91, 0));
 
-        let duration = parse("1m*60").unwrap();
-        assert_eq!(duration, Duration::new(3600, 0));
+        #[cfg(not(feature = "no_calc"))]
+        {
+            let duration = parse("1m+31").unwrap();
+            assert_eq!(duration, Duration::new(91, 0));
+            let duration = parse("1m*60").unwrap();
+            assert_eq!(duration, Duration::new(3600, 0));
 
-        let duration = parse("1m*60*20").unwrap();
-        assert_eq!(duration, Duration::new(72000, 0));
+            let duration = parse("1m*60*20").unwrap();
+            assert_eq!(duration, Duration::new(72000, 0));
 
-        let duration = parse("1m+60+24").unwrap();
-        assert_eq!(duration, Duration::new(144, 0));
+            let duration = parse("1m+60+24").unwrap();
+            assert_eq!(duration, Duration::new(144, 0));
 
-        let duration = parse("1m+60+24 ").unwrap();
-        assert_eq!(duration, Duration::new(144, 0));
+            let duration = parse("1m+60+24 ").unwrap();
+            assert_eq!(duration, Duration::new(144, 0));
 
-        let duration = parse("      1m      +  60 +             24 ").unwrap();
-        assert_eq!(duration, Duration::new(144, 0))
+            let duration = parse("      1m      +  60 +             24 ").unwrap();
+            assert_eq!(duration, Duration::new(144, 0))
+        }
     }
 
     #[cfg(feature = "cn_unit")]
@@ -233,23 +236,36 @@ mod tests {
         let duration = parse("1分31秒").unwrap();
         assert_eq!(duration, Duration::new(91, 0));
 
-        let duration = parse("1分+31秒").unwrap();
-        assert_eq!(duration, Duration::new(91, 0));
+        #[cfg(not(feature = "no_calc"))]
+        {
+            let duration = parse("1分+31秒").unwrap();
+            assert_eq!(duration, Duration::new(91, 0));
 
-        let duration = parse("1分+31秒+2毫秒+3纳秒").unwrap();
-        assert_eq!(duration, Duration::new(91, 2 * 1000 * 1000 + 3));
+            let duration = parse("1分+31秒+2毫秒+3纳秒").unwrap();
+            assert_eq!(duration, Duration::new(91, 2 * 1000 * 1000 + 3));
 
-        let duration = parse(" 1分+   31秒 + 2毫秒+  3纳秒  ").unwrap();
-        assert_eq!(duration, Duration::new(91, 2 * 1000 * 1000 + 3));
+            let duration = parse(" 1分+   31秒 + 2毫秒+  3纳秒  ").unwrap();
+            assert_eq!(duration, Duration::new(91, 2 * 1000 * 1000 + 3));
+        }
     }
 
     #[test]
     fn test_duration_err() {
+        #[cfg(not(feature = "no_calc"))]
         assert_eq!(
             catch_err!(parse("0m+3-5")),
             r#"
 0m+3-5
     ^
+expected ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]"#
+                .trim()
+        );
+        #[cfg(feature = "no_calc")]
+        assert_eq!(
+            catch_err!(parse("0m3-5")),
+            r#"
+0m3-5
+   ^
 expected ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]"#
                 .trim()
         );
@@ -263,6 +279,7 @@ expected ["y", "mon", "w", "d", "h", "m", "s", "ms", "µs", "us", "ns"]"#
                 .trim()
         );
 
+        #[cfg(not(feature = "no_calc"))]
         assert_eq!(
             catch_err!(parse("3ms-2ms")),
             r#"
@@ -289,35 +306,47 @@ expected ['+', '*']"#
         let duration = parse("   1d   ").unwrap();
         assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
 
-        let duration = parse("3m+31").unwrap(); //the default duration unit is second.
-        assert_eq!(duration, Duration::new(211, 0));
+        #[cfg(not(feature = "no_calc"))]
+        {
+            let duration = parse("3m+31").unwrap(); //the default duration unit is second.
+            assert_eq!(duration, Duration::new(211, 0));
 
-        let duration = parse("3m + 31").unwrap(); //the default duration unit is second.
-        assert_eq!(duration, Duration::new(211, 0));
+            let duration = parse("3m + 31").unwrap(); //the default duration unit is second.
+            assert_eq!(duration, Duration::new(211, 0));
 
-        let duration = parse("3m + 13s + 29ms").unwrap();
-        assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
+            let duration = parse("3m + 13s + 29ms").unwrap();
+            assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
 
-        let duration = parse("3m + 1s + 29ms +17µs").unwrap();
-        assert_eq!(
-            duration,
-            Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
-        );
+            let duration = parse("3m + 1s + 29ms +17µs").unwrap();
+            assert_eq!(
+                duration,
+                Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+            );
 
-        let duration = parse("1m*10").unwrap(); //the default duration unit is second.
-        assert_eq!(duration, Duration::new(600, 0));
+            let duration = parse("1m*10").unwrap(); //the default duration unit is second.
+            assert_eq!(duration, Duration::new(600, 0));
 
-        let duration = parse("1m*10ms").unwrap();
-        assert_eq!(duration, Duration::new(0, 600 * 1000 * 1000));
+            let duration = parse("1m*10ms").unwrap();
+            assert_eq!(duration, Duration::new(0, 600 * 1000 * 1000));
 
-        let duration = parse("1m * 1ns").unwrap();
-        assert_eq!(duration, Duration::new(0, 60));
+            let duration = parse("1m * 1ns").unwrap();
+            assert_eq!(duration, Duration::new(0, 60));
 
-        let duration = parse("1m * 1m").unwrap();
-        assert_eq!(duration, Duration::new(3600, 0));
+            let duration = parse("1m * 1m").unwrap();
+            assert_eq!(duration, Duration::new(3600, 0));
 
-        let duration = parse("3m + 31").unwrap();
-        assert_eq!(duration, Duration::new(211, 0));
+            let duration = parse("3m + 31").unwrap();
+            assert_eq!(duration, Duration::new(211, 0));
+        }
+
+        #[cfg(feature = "no_calc")]
+        {
+            let duration = parse("3m31").unwrap(); //the default duration unit is second.
+            assert_eq!(duration, Duration::new(211, 0));
+
+            let duration = parse("3m  31").unwrap(); //the default duration unit is second.
+            assert_eq!(duration, Duration::new(211, 0));
+        }
 
         let duration = parse("3m  31s").unwrap();
         assert_eq!(duration, Duration::new(211, 0));
@@ -332,6 +361,7 @@ expected ['+', '*']"#
         assert_eq!(duration, Duration::new(93784, 0));
     }
 
+    #[cfg(not(feature = "no_calc"))]
     #[test]
     fn test_overflow_plus() {
         assert_eq!(
@@ -345,6 +375,7 @@ overflow error"#
         );
     }
 
+    #[cfg(not(feature = "no_calc"))]
     #[test]
     fn test_max_mul() {
         let duration = parse("580y*1").unwrap();
@@ -354,6 +385,7 @@ overflow error"#
         );
     }
 
+    #[cfg(not(feature = "no_calc"))]
     #[test]
     fn test_overflow_mul() {
         let err = parse("580y*2").err().unwrap();
@@ -365,35 +397,44 @@ overflow error"#
         let duration = parse("1 d").unwrap();
         assert_eq!(duration, Duration::new(24 * 60 * 60, 0));
 
-        let duration = parse("3 m+31").unwrap(); //the default duration unit is second.
-        assert_eq!(duration, Duration::new(211, 0));
+        #[cfg(not(feature = "no_calc"))]
+        {
+            let duration = parse("3 m+31").unwrap(); //the default duration unit is second.
+            assert_eq!(duration, Duration::new(211, 0));
 
-        let duration = parse("3 m + 31").unwrap(); //the default duration unit is second.
-        assert_eq!(duration, Duration::new(211, 0));
+            let duration = parse("3 m + 31").unwrap(); //the default duration unit is second.
+            assert_eq!(duration, Duration::new(211, 0));
 
-        let duration = parse("3 m + 13 s + 29 ms").unwrap();
-        assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
+            let duration = parse("3 m + 13 s + 29 ms").unwrap();
+            assert_eq!(duration, Duration::new(193, 29 * 1000 * 1000 + 0 + 0));
 
-        let duration = parse("3 m + 1 s + 29 ms +17µs").unwrap();
-        assert_eq!(
-            duration,
-            Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
-        );
+            let duration = parse("3 m + 1 s + 29 ms +17µs").unwrap();
+            assert_eq!(
+                duration,
+                Duration::new(181, 29 * 1000 * 1000 + 17 * 1000 + 0)
+            );
 
-        let duration = parse("1 m*10").unwrap(); //the default duration unit is second.
-        assert_eq!(duration, Duration::new(600, 0));
+            let duration = parse("1 m*10").unwrap(); //the default duration unit is second.
+            assert_eq!(duration, Duration::new(600, 0));
 
-        let duration = parse("1 m*10 ms").unwrap();
-        assert_eq!(duration, Duration::new(0, 600 * 1000 * 1000));
+            let duration = parse("1 m*10 ms").unwrap();
+            assert_eq!(duration, Duration::new(0, 600 * 1000 * 1000));
 
-        let duration = parse("1 m * 1ns").unwrap();
-        assert_eq!(duration, Duration::new(0, 60));
+            let duration = parse("1 m * 1ns").unwrap();
+            assert_eq!(duration, Duration::new(0, 60));
 
-        let duration = parse("1 m * 1 m").unwrap();
-        assert_eq!(duration, Duration::new(3600, 0));
+            let duration = parse("1 m * 1 m").unwrap();
+            assert_eq!(duration, Duration::new(3600, 0));
 
-        let duration = parse("3 m + 31").unwrap();
-        assert_eq!(duration, Duration::new(211, 0));
+            let duration = parse("3 m + 31").unwrap();
+            assert_eq!(duration, Duration::new(211, 0));
+        }
+
+        #[cfg(feature = "no_calc")]
+        {
+            let duration = parse("3 m31").unwrap(); //the default duration unit is second.
+            assert_eq!(duration, Duration::new(211, 0));
+        }
 
         let duration = parse("3 m  31 s").unwrap();
         assert_eq!(duration, Duration::new(211, 0));
@@ -420,7 +461,10 @@ mod chrono_tests {
     #[test]
     fn test_parse_chrono() {
         use chrono::Duration;
+        #[cfg(not(feature = "no_calc"))]
         let duration = parse_chrono("1m+60+24 ").unwrap();
+        #[cfg(feature = "no_calc")]
+        let duration = parse_chrono("1m84s ").unwrap();
         assert_eq!(duration, Duration::seconds(144))
     }
 
@@ -464,7 +508,15 @@ mod time_tests {
 
     #[test]
     fn test_parse_time() {
-        let duration = parse_time("1m+60+24 ").unwrap();
-        assert_eq!(duration, Duration::seconds(144))
+        #[cfg(not(feature = "no_calc"))]
+        {
+            let duration = parse_time("1m+60+24 ").unwrap();
+            assert_eq!(duration, Duration::seconds(144))
+        }
+        #[cfg(feature = "no_calc")]
+        {
+            let duration = parse_time("1m84 ").unwrap();
+            assert_eq!(duration, Duration::seconds(144))
+        }
     }
 }

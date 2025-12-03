@@ -75,10 +75,13 @@ jobs:
           use-tool-cache: true
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Run tests
-        run: cargo test  --all-features --all
+      - name: Run tests with default features
+        run: cargo test --workspace
+      # use `--all-targets` to skip doctests as including `no_calc` makes them fail
+      - name: Run tests with all features 
+        run: cargo test --all-features --all-targets --workspace
       - name: Run tests without default features.
-        run: cargo test --no-default-features --features="calc"
+        run: cargo test --no-default-features --workspace
       - name: Run examples with deserialize_duration
         run: cargo run --example deserialize_duration
       - name: Run examples with deserialize_duration_chrono
