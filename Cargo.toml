@@ -9,7 +9,7 @@ readme = "README.md"
 categories = ["parsing", "date-and-time"]
 repository = "https://github.com/baoyachi/duration-str"
 license = "Apache-2.0"
-exclude = ["duration-str.png", "./playground"]
+exclude = ["duration-str.png", "playground"]
 
 [features]
 default = ["chrono", "serde", "time"]
