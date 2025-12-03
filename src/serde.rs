@@ -138,7 +138,10 @@ mod tests {
             #[serde(deserialize_with = "deserialize_duration_time")]
             time_ticker: TDuration,
         }
+        #[cfg(not(feature = "no_calc"))]
         let json = r#"{"time_ticker":"1y+30"}"#;
+        #[cfg(feature = "no_calc")]
+        let json = r#"{"time_ticker":"1y30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(
             config.time_ticker,
@@ -156,7 +159,10 @@ mod tests {
             #[serde(deserialize_with = "deserialize_option_duration_time")]
             time_ticker: Option<TDuration>,
         }
+        #[cfg(not(feature = "no_calc"))]
         let json = r#"{"time_ticker":"1y+30"}"#;
+        #[cfg(feature = "no_calc")]
+        let json = r#"{"time_ticker":"1y30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(
             config.time_ticker,
@@ -172,7 +178,10 @@ mod tests {
             #[serde(deserialize_with = "deserialize_duration_time")]
             time_ticker: TDuration,
         }
+        #[cfg(not(feature = "no_calc"))]
         let json = r#"{"time_ticker":"1 y + 30"}"#;
+        #[cfg(feature = "no_calc")]
+        let json = r#"{"time_ticker":"1 y  30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(
             config.time_ticker,
@@ -189,7 +198,10 @@ mod tests {
             #[serde(deserialize_with = "deserialize_duration_chrono")]
             time_ticker: Duration,
         }
+        #[cfg(not(feature = "no_calc"))]
         let json = r#"{"time_ticker":"1y+30"}"#;
+        #[cfg(feature = "no_calc")]
+        let json = r#"{"time_ticker":"1y30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(
             config.time_ticker,
@@ -206,7 +218,10 @@ mod tests {
             #[serde(deserialize_with = "deserialize_option_duration_chrono")]
             time_ticker: Option<Duration>,
         }
+        #[cfg(not(feature = "no_calc"))]
         let json = r#"{"time_ticker":"1y+30"}"#;
+        #[cfg(feature = "no_calc")]
+        let json = r#"{"time_ticker":"1y30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(
             config.time_ticker,
@@ -222,7 +237,11 @@ mod tests {
             #[serde(deserialize_with = "deserialize_duration")]
             time_ticker: std::time::Duration,
         }
+
+        #[cfg(not(feature = "no_calc"))]
         let json = r#"{"time_ticker":"1min+30"}"#;
+        #[cfg(feature = "no_calc")]
+        let json = r#"{"time_ticker":"1min30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(config.time_ticker, std::time::Duration::from_secs(90));
     }
@@ -235,7 +254,10 @@ mod tests {
             #[serde(deserialize_with = "deserialize_option_duration")]
             time_ticker: Option<std::time::Duration>,
         }
+        #[cfg(not(feature = "no_calc"))]
         let json = r#"{"time_ticker":"1min+30"}"#;
+        #[cfg(feature = "no_calc")]
+        let json = r#"{"time_ticker":"1min30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(config.time_ticker, Some(std::time::Duration::from_secs(90)));
     }
@@ -248,7 +270,10 @@ mod tests {
             #[serde(deserialize_with = "deserialize_duration")]
             time_ticker: std::time::Duration,
         }
+        #[cfg(not(feature = "no_calc"))]
         let json = r#"{"time_ticker":"1y+30"}"#;
+        #[cfg(feature = "no_calc")]
+        let json = r#"{"time_ticker":"1y30"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(
             config.time_ticker,
