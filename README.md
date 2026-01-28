@@ -165,7 +165,9 @@ fn main() {
 
 ## deserialize in struct
 
-deserialize to std::time::Duration
+### deserialize to std::time::Duration
+
+The `deserialize_duration` function works for both required and optional fields:
 
 ```rust
 use duration_str::deserialize_duration;
@@ -174,60 +176,41 @@ use std::time::Duration;
 
 #[derive(Debug, Deserialize)]
 struct Config {
+    // Required field
     #[serde(deserialize_with = "deserialize_duration")]
     time_ticker: Duration,
+    
+    // Optional field - same function!
+    #[serde(default, deserialize_with = "deserialize_duration")]
+    retry_after: Option<Duration>,
 }
 
 fn main() {
+    // Required field
     let json = r#"{"time_ticker":"1m+30"}"#;
     let config: Config = serde_json::from_str(json).unwrap();
     assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
 
-    let json = r#"{"time_ticker":"1m+30s"}"#;
+    // Optional field with value
+    let json = r#"{"time_ticker":"1m","retry_after":"30s"}"#;
     let config: Config = serde_json::from_str(json).unwrap();
-    assert_eq!(config.time_ticker, Duration::new(60 + 30, 0));
+    assert_eq!(config.retry_after, Some(Duration::new(30, 0)));
+
+    // Optional field with null
+    let json = r#"{"time_ticker":"1m","retry_after":null}"#;
+    let config: Config = serde_json::from_str(json).unwrap();
+    assert_eq!(config.retry_after, None);
+
+    // Optional field missing
+    let json = r#"{"time_ticker":"1m"}"#;
+    let config: Config = serde_json::from_str(json).unwrap();
+    assert_eq!(config.retry_after, None);
 }
 ```
 
-* option filed deserialize
+### chrono::Duration and time::Duration
 
-```rust
-use duration_str::deserialize_option_duration;
-use serde::*;
-use std::time::Duration;
-
-#[derive(Debug, Deserialize, PartialEq)]
-struct Config {
-    #[serde(default, deserialize_with = "deserialize_option_duration")]
-    time_ticker: Option<Duration>,
-    name: String,
-}
-
-fn main() {
-    let json = r#"{"time_ticker":null,"name":"foo"}"#;
-    let config: Config = serde_json::from_str(json).unwrap();
-
-    assert_eq!(
-        config,
-        Config {
-            time_ticker: None,
-            name: "foo".into()
-        }
-    );
-
-    let json = r#"{"name":"foo"}"#;
-    let config: Config = serde_json::from_str(json).unwrap();
-    assert_eq!(
-        config,
-        Config {
-            time_ticker: None,
-            name: "foo".into()
-        }
-    );
-}
-```
-
-Also you can use `deserialize_duration_chrono` or `deserialize_duration_time` function
+The same `deserialize_duration` function also works with `chrono::Duration` and `time::Duration` types via their respective convenience functions:
 
 ### E.g:
 
