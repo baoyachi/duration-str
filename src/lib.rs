@@ -119,6 +119,47 @@
 //! }
 //! ```
 //!
+//! ## deserialize option duration (using the same function)
+//!
+#![cfg_attr(not(feature = "serde"), doc = "This requires the `serde` feature")]
+//!
+#![cfg_attr(not(feature = "serde"), doc = "```ignore")]
+#![cfg_attr(feature = "serde", doc = "```rust")]
+//! use duration_str::deserialize_duration;
+//! use serde::*;
+//! use std::time::Duration;
+//!
+//! /// Uses `deserialize_duration` for both required and optional fields.
+//! #[derive(Debug, Deserialize, PartialEq)]
+//! struct Config {
+//!     #[serde(default, deserialize_with = "deserialize_duration")]
+//!     time_ticker: Option<Duration>,
+//!     name: String,
+//! }
+//!
+//! fn needless_main() {
+//!     // With valid duration string
+//!     let json = r#"{"time_ticker":"1m+30","name":"foo"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(config.time_ticker, Some(Duration::new(90, 0)));
+//!
+//!     // With null value
+//!     let json = r#"{"time_ticker":null,"name":"foo"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(config.time_ticker, None);
+//!
+//!     // With missing field
+//!     let json = r#"{"name":"foo"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(config.time_ticker, None);
+//!
+//!     // With empty string
+//!     let json = r#"{"time_ticker":"","name":"foo"}"#;
+//!     let config: Config = serde_json::from_str(json).unwrap();
+//!     assert_eq!(config.time_ticker, None);
+//! }
+//! ```
+//!
 //! # deserialize to chrono::Duration
 #![cfg_attr(
     not(all(feature = "chrono", feature = "serde")),
