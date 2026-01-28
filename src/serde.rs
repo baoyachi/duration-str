@@ -58,6 +58,10 @@ macro_rules! des_option_duration {
                 use serde::Deserialize;
                 let s: Option<String> = Option::deserialize(d)?;
                 if let Some(s) = s {
+                    // Empty string should be treated as None
+                    if s.is_empty() {
+                        return Ok(None);
+                    }
                     let duration = $parse(s).map_err(serde::de::Error::custom)?;
                     return Ok(Some(duration));
                 }
@@ -303,6 +307,27 @@ mod tests {
         );
 
         let json = r#"{"name":"foo"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            config,
+            Config {
+                time_ticker: None,
+                name: "foo".into(),
+            }
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_deserialize_option_duration_empty_string() {
+        #[derive(Debug, serde::Deserialize, PartialEq)]
+        struct Config {
+            #[serde(default, deserialize_with = "deserialize_option_duration")]
+            time_ticker: Option<std::time::Duration>,
+            name: String,
+        }
+        // Empty string should be treated as None
+        let json = r#"{"time_ticker":"","name":"foo"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(
             config,
