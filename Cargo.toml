@@ -21,7 +21,7 @@ cn_unit = []
 [dependencies]
 thiserror = "2.0.0"
 chrono = { version = "0.4.38", optional = true, default-features = false, features = ["now"] }
-time = { version = "0.3.17", optional = true, default-features = false }
+time = { version = "0.3.47", optional = true, default-features = false }
 
 serde = { version = "1.0.147", features = ["derive"], optional = true }
 rust_decimal = { version = "1.29.1", default-features = false }
