@@ -467,13 +467,13 @@ mod tests {
             time_ticker: Option<std::time::Duration>,
             name: String,
         }
-        // Empty string should be treated as None
+        // The flattened structure containing a property set to null in the
+        // JSON should be deserialized as None
         #[derive(Debug, serde::Deserialize, PartialEq)]
         struct Config {
             #[serde(default, flatten)]
             config: ConfigSubStruct,
         }
-        // Empty string should be treated as None
         let json = r#"{"time_ticker":null,"name":"foo"}"#;
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(
