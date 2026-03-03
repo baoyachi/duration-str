@@ -93,6 +93,13 @@ macro_rules! impl_deserialize_option_duration {
                         Ok(Some(duration))
                     }
 
+                    fn visit_unit<E>(self) -> Result<Self::Value, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        Ok(None)
+                    }
+
                     fn visit_none<E>(self) -> Result<Self::Value, E>
                     where
                         E: serde::de::Error,
@@ -116,7 +123,7 @@ macro_rules! impl_deserialize_option_duration {
 /// #[serde(deserialize_with = "deserialize_duration")]
 /// time_ticker: Duration,
 ///
-/// // For optional Duration field  
+/// // For optional Duration field
 /// #[serde(default, deserialize_with = "deserialize_duration")]
 /// time_ticker: Option<Duration>,
 /// ```
@@ -447,6 +454,35 @@ mod tests {
             Config {
                 time_ticker: None,
                 name: "foo".into(),
+            }
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn test_deserialize_option_duration_with_null_using_struct_flatten() {
+        #[derive(Debug, serde::Deserialize, PartialEq)]
+        struct ConfigSubStruct {
+            #[serde(default, deserialize_with = "deserialize_duration")]
+            time_ticker: Option<std::time::Duration>,
+            name: String,
+        }
+        // The flattened structure containing a property set to null in the
+        // JSON should be deserialized as None
+        #[derive(Debug, serde::Deserialize, PartialEq)]
+        struct Config {
+            #[serde(default, flatten)]
+            config: ConfigSubStruct,
+        }
+        let json = r#"{"time_ticker":null,"name":"foo"}"#;
+        let config: Config = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            config,
+            Config {
+                config: ConfigSubStruct {
+                    time_ticker: None,
+                    name: "foo".into(),
+                }
             }
         );
     }
